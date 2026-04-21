@@ -484,7 +484,7 @@ button:disabled { opacity:.35; cursor:not-allowed; }
    IN-GAME HOST END BUTTON (in header)
 ══════════════════════════════════════ */
 .btn-endgame-hdr {
-  display:none; background:rgba(240,72,72,.14); color:var(--red);
+  background:rgba(240,72,72,.14); color:var(--red);
   padding:5px 9px; border-radius:7px; font-size:.68rem;
   font-weight:900; border:1px solid rgba(240,72,72,.26);
   white-space:nowrap; margin-top:4px;
@@ -844,7 +844,7 @@ button:disabled { opacity:.35; cursor:not-allowed; }
       <div class="g-meta">
         <span class="ml">جولة <strong id="ui-round">1/5</strong></span>
         <span class="ml">نقاطي <strong class="sc" id="ui-score">0</strong></span>
-        <button class="btn-endgame-hdr" id="btn-end-hdr">⛔ إنهاء</button>
+        <button class="btn-endgame-hdr" id="btn-end-hdr" style="display:none">⛔ إنهاء</button>
       </div>
     </div>
 
@@ -891,7 +891,12 @@ button:disabled { opacity:.35; cursor:not-allowed; }
       ⏳ القائد يراجع الإجابات ويوزع النقاط...
     </div>
     <div class="card" id="review-body" style="padding:13px"></div>
-    <button class="btn-gold" id="btn-next" style="display:none">اعتمد النقاط والتالي ➡️</button>
+    
+    <!-- Host End Button in Review -->
+    <div id="rev-host-controls" style="display:none; gap:10px; width:100%;">
+      <button class="btn-outline" id="btn-review-end" style="flex:1; color:var(--red); border-color:rgba(240,72,72,.3); padding:14px; font-weight:900; border-radius:var(--radsm); background:rgba(240,72,72,.05);">⛔ إنهاء</button>
+      <button class="btn-gold" id="btn-next" style="flex:2;">اعتمد النقاط والتالي ➡️</button>
+    </div>
   </div>
 </div>
 
@@ -969,8 +974,8 @@ button:disabled { opacity:.35; cursor:not-allowed; }
    CONSTANTS
 ═══════════════════════════════ */
 const MAX_P   = 8;
-const AVATARS = ['بدون','🦊','🐱','🐼','🐯','🐰','🐸','🦄','🐶','🦁','🦉','🐙','🦖','🐬','🐧','👻','🤖','🦝'];
-const LETTERS = ['أ','ب','ت','ث','ج','ح','خ','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ع','غ','ف','ق','ك','ل','م','ن','ه','و','ي'];
+const AVATARS =['بدون','🦊','🐱','🐼','🐯','🐰','🐸','🦄','🐶','🦁','🦉','🐙','🦖','🐬','🐧','👻','🤖','🦝'];
+const LETTERS =['أ','ب','ت','ث','ج','ح','خ','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ع','غ','ف','ق','ك','ل','م','ن','ه','و','ي'];
 const CATS    = {'1':{name:'إنسان',icon:'👤'},'2':{name:'حيوان',icon:'🦁'},'3':{name:'نبات',icon:'🌳'},'4':{name:'جماد',icon:'🪑'},'5':{name:'بلاد',icon:'🌍'}};
 const STUN    = {config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}};
 
@@ -1118,6 +1123,7 @@ function bindUI(){
   document.getElementById('btn-end-hdr').addEventListener('click',()=>hostInitiateVote());
 
   // Review/End
+  document.getElementById('btn-review-end').addEventListener('click',()=>hostInitiateVote());
   document.getElementById('btn-next').addEventListener('click',()=>{ if(S.isHost) hostConfirmReview(); });
   document.getElementById('btn-home').addEventListener('click',()=>location.reload());
 
@@ -1172,9 +1178,9 @@ function renderLobby(){
 
   list.querySelectorAll('.kick-btn').forEach(btn=>btn.addEventListener('click',()=>hostKick(btn.getAttribute('data-pid'))));
 
-  // Show end-bar if host and we have players (even just host alone after game start, to end early)
+  // Show end-bar if host and we have players
   const showEndBar = S.isHost && keys.length >= 1;
-  document.getElementById('lobby-end-bar').style.display = showEndBar ? '' : 'none';
+  document.getElementById('lobby-end-bar').style.display = showEndBar ? 'flex' : 'none';
 }
 
 /* ═══════════════════════════════
@@ -1192,7 +1198,7 @@ function createRoom(){
 
   S.peer.on('open',id=>{
     S.isHost=true; S.myId=id; S.myName=safeName;
-    S.players[id]={name:safeName,ava:S.myAva,score:0,answers:{},isConnected:true};
+    S.players[id]={name:safeName,ava:S.myAva,score:0,answers:{},hasSubmitted:false,isConnected:true};
     document.getElementById('lbl-code').textContent=S.roomCode;
     document.getElementById('host-zone').style.display='';
     document.getElementById('settings-zone').style.display='';
@@ -1233,7 +1239,7 @@ function hostOnData(pid,data,conn){
       const sn=sanitizeName(data.name);
       const sa=AVATARS.includes(data.ava)?data.ava:'🦊';
       S.clientConns[pid]=conn;
-      S.players[pid]={name:sn,ava:sa,score:0,answers:{},isConnected:true};
+      S.players[pid]={name:sn,ava:sa,score:0,answers:{},hasSubmitted:false,isConnected:true};
       hostBcast({type:'SYNC_LOBBY',players:S.players,settings:{maxRounds:S.maxRounds,roundTime:S.roundTime}});
       renderLobby();
       toast(sn+' انضم! 🎉','ok'); vib([30,20,30]);
@@ -1244,23 +1250,23 @@ function hostOnData(pid,data,conn){
       break;
     case 'SUBMIT':
       if((S.phase==='PLAYING'||S.phase==='SUBMITTING')&&S.players[pid]){
-        const ans={};
-        if(data.answers&&typeof data.answers==='object'){
-          Object.keys(CATS).forEach(k=>{ const v=data.answers[k]; if(typeof v==='string') ans[k]=v.trim().substring(0,50); });
+        if (!S.players[pid].hasSubmitted) {
+          const ans={};
+          if(data.answers&&typeof data.answers==='object'){
+            Object.keys(CATS).forEach(k=>{ const v=data.answers[k]; if(typeof v==='string') ans[k]=v.trim().substring(0,50); });
+          }
+          S.players[pid].answers=ans;
+          S.players[pid].hasSubmitted=true;
+          S.answersIn++;
+          hostCheckAll();
         }
-        S.players[pid].answers=ans;
-        S.answersIn++;
-        hostCheckAll();
       }
       break;
     case 'VOTE':
-      /* ── VOTE FIX: always process vote if pending, ignore rate limit ── */
       if(S.votePending && typeof data.vote==='string' && (data.vote==='end'||data.vote==='cont')){
-        // Only count once per player
         if(!S.voteResults.hasOwnProperty(pid)){
           S.voteResults[pid]=data.vote;
           hostRefreshVoteUI();
-          // Check if everyone has voted — resolve early
           const total=Object.keys(S.players).length;
           const voted=Object.keys(S.voteResults).length;
           if(voted>=total) hostResolveVote();
@@ -1273,22 +1279,24 @@ function hostOnData(pid,data,conn){
 function hostOnDisconn(pid){
   if(!S.players[pid]) return;
   toast(S.players[pid].name+' غادر','err');
-  // If vote was pending and this player hadn't voted, treat as 'cont'
-  if(S.votePending && !S.voteResults.hasOwnProperty(pid)){
-    S.voteResults[pid]='cont';
-    hostRefreshVoteUI();
-  }
+  
+  if (S.players[pid].hasSubmitted) S.answersIn--;
   delete S.players[pid]; delete S.clientConns[pid]; delete _rateTs[pid];
+  
+  // Clean up vote if any
+  if(S.votePending){
+    delete S.voteResults[pid];
+    hostRefreshVoteUI();
+    const total=Object.keys(S.players).length;
+    const voted=Object.keys(S.voteResults).length;
+    if(total > 0 && voted>=total) hostResolveVote();
+  }
+
   if(S.phase==='LOBBY'){
     hostBcast({type:'SYNC_LOBBY',players:S.players,settings:{maxRounds:S.maxRounds,roundTime:S.roundTime}});
     renderLobby();
   } else if(S.phase==='PLAYING'||S.phase==='SUBMITTING'){
     hostCheckAll();
-  }
-  if(S.votePending){
-    const total=Object.keys(S.players).length;
-    const voted=Object.keys(S.voteResults).length;
-    if(voted>=total) hostResolveVote();
   }
 }
 
@@ -1301,14 +1309,17 @@ function hostKick(pid){
   const name=S.players[pid].name;
   try{ const c=S.clientConns[pid]; if(c&&c.open) c.send({type:'KICK',msg:'تم طردك من الغرفة.'}); }catch(e){}
   try{ if(S.clientConns[pid]) S.clientConns[pid].close(); }catch(e){}
+  
+  if (S.players[pid].hasSubmitted) S.answersIn--;
   delete S.players[pid]; delete S.clientConns[pid]; delete _rateTs[pid];
+  delete S.voteResults[pid];
+
   hostBcast({type:'SYNC_LOBBY',players:S.players,settings:{maxRounds:S.maxRounds,roundTime:S.roundTime}});
   renderLobby(); vib(60); toast(name+' تم طرده','ok');
 }
 
 /* ═══════════════════════════════
    HOST — VOTE SYSTEM
-   Fully self-contained, live-updating
 ═══════════════════════════════ */
 function hostInitiateVote(){
   if(!S.isHost||S.votePending) return;
@@ -1320,13 +1331,9 @@ function hostInitiateVote(){
   // Host counts as voted 'end' immediately
   S.voteResults[S.myId]='end';
 
-  // Broadcast vote start to all clients
   hostBcast({type:'VOTE_START',sec:S.voteSec});
-
-  // Show overlay for host
   openVoteOverlay(true);
 
-  // Start the countdown
   clearInterval(S.voteTimerInt);
   S.voteTimerInt=setInterval(()=>{
     S.voteSec--;
@@ -1334,18 +1341,19 @@ function hostInitiateVote(){
     if(S.voteSec<=0){ clearInterval(S.voteTimerInt); hostResolveVote(); }
   },1000);
 
-  // Immediately push current counts (host voted end = 1)
   hostRefreshVoteUI();
+
+  // If host is the only player, resolve immediately
+  const total=Object.keys(S.players).length;
+  if(total === 1) {
+      hostResolveVote();
+  }
 }
 
 function hostRefreshVoteUI(){
   const endN  = Object.values(S.voteResults).filter(v=>v==='end').length;
   const contN = Object.values(S.voteResults).filter(v=>v==='cont').length;
-
-  // Update host's own UI
   updateVoteCounts(endN,contN);
-
-  // Push live update to all clients
   hostBcast({type:'VOTE_UPDATE',end:endN,cont:contN});
 }
 
@@ -1358,7 +1366,6 @@ function hostResolveVote(){
   const contN = Object.values(S.voteResults).filter(v=>v==='cont').length;
   const doEnd = endN>=contN;   // tie goes to end
 
-  // Tell clients result
   hostBcast({type:'VOTE_RESULT',end:endN,cont:contN,doEnd});
   closeVoteOverlay();
 
@@ -1396,8 +1403,7 @@ function openVoteOverlay(isHost){
   document.getElementById('v-sub').textContent=
     isHost ? 'اختر إنهاء فوري أو انتظر انتهاء التصويت' : 'القائد يريد إنهاء اللعبة — صوّت الآن!';
   document.getElementById('v-host-btns').style.display   = isHost?'flex':'none';
-  document.getElementById('v-player-btns').style.display = isHost?'none':'';
-  // Disable player vote buttons until they vote
+  document.getElementById('v-player-btns').style.display = isHost?'none':'flex';
   document.getElementById('btn-vote-end').disabled  = false;
   document.getElementById('btn-vote-cont').disabled = false;
   updateVoteCounts(0,0);
@@ -1432,7 +1438,6 @@ function updateVoteTimer(){
   if(bar) bar.style.width=(sec/15*100)+'%';
 }
 
-/* Player (client) vote action */
 function playerVote(choice){
   if(S.hasVoted) return;
   S.hasVoted=true;
@@ -1448,11 +1453,13 @@ function playerVote(choice){
 ═══════════════════════════════ */
 function hostStartRound(){
   if(S.round>S.maxRounds){ hostEndGame(); return; }
-  // Close any open vote overlay
   if(S.votePending){ clearInterval(S.voteTimerInt); S.votePending=false; closeVoteOverlay(); }
 
   S.phase='ROULETTE'; S.emergency=false; S.answersIn=0;
-  Object.keys(S.players).forEach(id=>{ S.players[id].answers={}; });
+  Object.keys(S.players).forEach(id=>{ 
+    S.players[id].answers={}; 
+    S.players[id].hasSubmitted=false; 
+  });
 
   const recent=S.usedLetters.slice(-6);
   const pool=LETTERS.filter(l=>!recent.includes(l));
@@ -1585,7 +1592,6 @@ function clientOnData(data){
     case 'GAME_OVER':
       S.players=data.players||{}; clientShowEnd(S.players); break;
 
-    /* ── VOTE messages ── */
     case 'VOTE_START':{
       S.votePending=true; S.hasVoted=false; S.voteSec=data.sec||15;
       openVoteOverlay(false);
@@ -1598,7 +1604,6 @@ function clientOnData(data){
       break;
     }
     case 'VOTE_UPDATE':
-      // Live count update — always apply immediately
       updateVoteCounts(data.end||0,data.cont||0);
       break;
     case 'VOTE_RESULT':
@@ -1645,14 +1650,12 @@ function playRoulette(letter,rnd,maxR,onDone){
       lEl.textContent=pick;
       lEl.style.color=colors[rand(0,colors.length-1)];
       lEl.style.textShadow=`0 0 ${rand(12,45)}px rgba(232,184,75,${(.3+Math.random()*.5).toFixed(2)})`;
-      // Advance the ring arc
       setRouletteArc(count/totalSpins);
       Snd.spin();
       count++;
       delay=Math.min(delay+9,170);
       setTimeout(spin,delay);
     } else {
-      // Land
       setRouletteArc(1);
       lEl.textContent=letter;
       lEl.style.color='var(--gold)';
@@ -1699,7 +1702,7 @@ function beginPlay(){
   setArc(1);
 
   // Show end-game button in header only for host
-  document.getElementById('btn-end-hdr').style.display=S.isHost?'':'none';
+  document.getElementById('btn-end-hdr').style.display=S.isHost?'inline-block':'none';
 
   showScreen('s-game');
   if(window.innerWidth>600) setTimeout(()=>document.getElementById('inp-1').focus(),350);
@@ -1745,7 +1748,11 @@ function onTimeUp(){
   toast('انتهى الوقت! جاري التجميع...','info');
 
   if(S.isHost){
-    S.players[S.myId].answers=ans; S.answersIn++;
+    if (!S.players[S.myId].hasSubmitted) {
+      S.players[S.myId].answers=ans; 
+      S.players[S.myId].hasSubmitted=true;
+      S.answersIn++;
+    }
     S.fallbackTimer=setTimeout(()=>{ if(S.phase==='SUBMITTING') hostDoReview(); },5500);
     hostCheckAll();
   } else {
@@ -1797,7 +1804,7 @@ function renderReview(data){
   S.phase='REVIEW'; showScreen('s-review');
   document.getElementById('rev-host-banner').style.display=S.isHost?'':'none';
   document.getElementById('rev-wait-banner').style.display=S.isHost?'none':'';
-  document.getElementById('btn-next').style.display=S.isHost?'':'none';
+  document.getElementById('rev-host-controls').style.display=S.isHost?'flex':'none';
 
   const body=document.getElementById('review-body');
   body.innerHTML='';
@@ -1840,7 +1847,6 @@ function renderReview(data){
     body.appendChild(sec);
   });
 
-  // Safe event delegation — NO inline onclick
   body.querySelectorAll('.cyc-btn').forEach(btn=>{
     btn.addEventListener('click',()=>{
       cycleScore(btn.getAttribute('data-cat'),btn.getAttribute('data-pid'));
