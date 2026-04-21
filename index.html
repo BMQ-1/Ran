@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#08080e">
+<!-- 
+  Strict Content Security Policy (CSP):
+  Blocks all external scripts except trusted CDNs (PeerJS & Fonts).
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' wss://0.peerjs.com https://0.peerjs.com stun.l.google.com:19302 stun1.l.google.com:19302; img-src 'self' data: blob:; media-src 'self' data:; object-src 'none'; base-uri 'self';">
+<title>أوراق مِرسال — لعبة بطاقات جماعية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   1. CSS Reset & Variables (متهيئة للعبة)
+   ========================================================================== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;user-select:none;}
+:root{
+  --bg0:#08080e; --bg1:#0f0f18; --bg2:#15151f; --bg3:#1d1d2a; --bg4:#252537;
+  --b0:rgba(255,255,255,0.06); --b1:rgba(255,255,255,0.12); --b2:rgba(255,255,255,0.2);
+  --accent:#6c63ff; --accent2:#9490ff; --adim:rgba(108,99,255,0.15); --aglow:rgba(108,99,255,0.25);
+  --t0:#f8f8f8; --t1:#a0a0b8; --t2:#606078;
+  
+  /* Game Specific Colors */
+  --c-red:#ef4444; --c-red-dim:rgba(239,68,68,0.15);
+  --c-blue:#3b82f6; --c-blue-dim:rgba(59,130,246,0.15);
+  --c-green:#22c55e; --c-green-dim:rgba(34,197,94,0.15);
+  --c-yellow:#eab308; --c-yellow-dim:rgba(234,179,8,0.15);
+  --c-wild: linear-gradient(135deg, var(--c-red) 0%, var(--c-yellow) 33%, var(--c-green) 66%, var(--c-blue) 100%);
+  --c-dark:#111;
+  
+  --st:env(safe-area-inset-top, 0px); --sb:env(safe-area-inset-bottom, 0px);
+}
+html{height:100%}
+body{
+  min-height:100dvh; background:var(--bg0); color:var(--t0);
+  font-family:'IBM Plex Sans Arabic', system-ui, sans-serif; font-size:15px; line-height:1.6;
+  overflow:hidden; -webkit-tap-highlight-color:transparent;
+}
+body::before{
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:radial-gradient(circle, rgba(108,99,255,0.04) 1px, transparent 1px);
+  background-size:32px 32px;
+}
+
+/* ==========================================================================
+   2. Typography & Core UI Components
+   ========================================================================== */
+.font-mono { font-family:'JetBrains Mono',monospace; }
+.text-center { text-align:center; }
+.hidden { display:none !important; }
+.btn { 
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; 
+  font-family:inherit; font-size:15px; font-weight:700; border:none; 
+  border-radius:14px; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+  white-space:nowrap; min-height:48px; padding:10px 24px; outline:none; 
+}
+.btn:active { transform:scale(0.95); }
+.btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+.btn-p { background:var(--accent); color:#fff; box-shadow:0 4px 15px rgba(108,99,255,0.2); }
+.btn-p:hover:not(:disabled) { background:var(--accent2); box-shadow:0 6px 20px var(--aglow); }
+.btn-g { background:var(--bg3); color:var(--t0); border:1px solid var(--b1); }
+.btn-g:hover:not(:disabled) { background:var(--bg4); border-color:var(--b2); }
+
+input[type=text] { 
+  background:var(--bg1); border:1px solid var(--b1); border-radius:14px; 
+  color:var(--t0); font-family:inherit; font-size:16px; padding:14px 18px; 
+  outline:none; transition:all 0.2s; width:100%; appearance:none; 
+}
+input[type=text]:focus { border-color:var(--accent); box-shadow:0 0 0 4px var(--adim); background:var(--bg2); }
+input::placeholder { color:var(--t2); }
+
+.card-ui { 
+  background:var(--bg2); border:1px solid var(--b0); border-radius:20px; 
+  padding:2rem; position:relative; z-index:1;
+  box-shadow:0 10px 40px rgba(0,0,0,0.4); width:100%; max-width:480px; 
+}
+
+/* ==========================================================================
+   3. Modals & Toasts
+   ========================================================================== */
+#toast { 
+  position:fixed; top:1.5rem; left:50%; transform:translateX(-50%) translateY(-20px); 
+  z-index:9999; display:flex; align-items:center; gap:12px; padding:14px 24px; 
+  background:var(--bg3); border:1px solid var(--b1); border-radius:100px; 
+  font-size:14px; font-weight:700; color:var(--t0); pointer-events:none; 
+  opacity:0; transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1); white-space:nowrap; 
+  max-width:90vw; box-shadow:0 10px 30px rgba(0,0,0,0.6); 
+}
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+.modal { 
+  display:none; position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,0.85); 
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); align-items:center; 
+  justify-content:center; padding:1rem; opacity:0; transition:opacity 0.25s ease; 
+}
+.modal.open { display:flex; } .modal.vis { opacity:1; }
+.mbox { 
+  background:var(--bg2); border:1px solid var(--b1); border-radius:24px; 
+  padding:2rem; width:100%; max-width:420px; transform:scale(0.95) translateY(15px); 
+  transition:transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); position:relative; 
+  box-shadow:0 20px 40px rgba(0,0,0,0.8); display:flex; flex-direction:column; gap:1rem;
+}
+.modal.vis .mbox { transform:scale(1) translateY(0); }
+
+/* ==========================================================================
+   4. Game Board Layout
+   ========================================================================== */
+#view-game {
+  position:fixed; inset:0; display:flex; flex-direction:column; z-index:10;
+  background:var(--bg0);
+}
+.game-header {
+  height:70px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 1.5rem; background:rgba(15,15,24,0.8); border-bottom:1px solid var(--b0);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); z-index:20;
+}
+.turn-indicator {
+  padding:6px 16px; border-radius:100px; font-weight:700; font-size:13px;
+  background:var(--bg3); border:1px solid var(--b1); display:flex; align-items:center; gap:8px;
+}
+.turn-indicator.my-turn {
+  background:var(--gdim); border-color:rgba(34,197,94,0.4); color:var(--c-green);
+  animation: pulse-glow 2s infinite;
+}
+@keyframes pulse-glow { 0% {box-shadow:0 0 0 0 rgba(34,197,94,0.4)} 70% {box-shadow:0 0 0 10px transparent} 100% {box-shadow:0 0 0 0 transparent} }
+
+.game-area {
+  flex:1; position:relative; overflow:hidden; display:flex; flex-direction:column;
+}
+
+/* Opponents Area (Top/Sides) */
+.opponents-container {
+  display:flex; justify-content:center; gap:2rem; padding:1.5rem; flex-wrap:wrap; min-height:120px;
+}
+.opponent {
+  display:flex; flex-direction:column; align-items:center; gap:6px; position:relative;
+  transition:all 0.3s ease; opacity:0.6;
+}
+.opponent.active { opacity:1; transform:scale(1.1); z-index:5; }
+.opponent-avatar {
+  width:60px; height:60px; border-radius:50%; background:var(--bg3); border:2px solid var(--b1);
+  display:flex; align-items:center; justify-content:center; font-size:24px; position:relative;
+  box-shadow:0 4px 10px rgba(0,0,0,0.3);
+}
+.opponent.active .opponent-avatar { border-color:var(--accent); box-shadow:0 0 20px var(--aglow); }
+.opponent-cards {
+  position:absolute; bottom:-8px; right:-8px; background:var(--accent); color:#fff;
+  font-size:11px; font-weight:800; padding:2px 6px; border-radius:8px; border:2px solid var(--bg0);
+}
+.opponent-name { font-size:12px; font-weight:600; color:var(--t1); max-width:80px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; }
+
+/* Center Table (Draw/Discard Piles) */
+.center-table {
+  flex:1; display:flex; align-items:center; justify-content:center; gap:2rem; position:relative;
+}
+.direction-indicator {
+  position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);
+  width:280px; height:280px; pointer-events:none; opacity:0.1; transition:all 0.5s;
+}
+.direction-indicator svg { width:100%; height:100%; fill:var(--t0); }
+.dir-cw { transform:translate(-50%, -50%) rotate(0deg); }
+.dir-ccw { transform:translate(-50%, -50%) rotate(180deg) scaleY(-1); }
+
+/* Play/Hand Area (Bottom) */
+.hand-container {
+  height:180px; padding:1rem; position:relative; display:flex; justify-content:center;
+  align-items:flex-end; perspective:1000px; pointer-events:none;
+}
+.my-cards {
+  display:flex; justify-content:center; align-items:flex-end; gap:-30px; /* Overlap */
+  position:relative; width:100%; max-width:800px; height:100%; pointer-events:auto;
+}
+
+/* ==========================================================================
+   5. Playing Cards Design
+   ========================================================================== */
+.pcard {
+  width:100px; height:150px; border-radius:12px; position:absolute;
+  transform-origin:bottom center; transition:all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow:-2px 0px 10px rgba(0,0,0,0.3); cursor:pointer;
+  background-color:#fff; user-select:none; display:flex; align-items:center; justify-content:center;
+  border:4px solid #fff; will-change: transform, bottom;
+}
+.pcard-inner {
+  width:100%; height:100%; border-radius:6px; display:flex; flex-direction:column;
+  position:relative; overflow:hidden; box-shadow:inset 0 0 10px rgba(0,0,0,0.2);
+}
+.pcard.color-red .pcard-inner { background:var(--c-red); }
+.pcard.color-blue .pcard-inner { background:var(--c-blue); }
+.pcard.color-green .pcard-inner { background:var(--c-green); }
+.pcard.color-yellow .pcard-inner { background:var(--c-yellow); }
+.pcard.color-wild .pcard-inner { background:var(--c-wild); }
+.pcard.color-dark .pcard-inner { background:var(--c-dark); }
+
+/* Decorative ellipse in middle */
+.pcard-inner::before {
+  content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-25deg);
+  width:85%; height:60%; background:rgba(255,255,255,0.95); border-radius:50%;
+  box-shadow:inset 0 0 8px rgba(0,0,0,0.1);
+}
+.pcard.color-dark .pcard-inner::before { background:rgba(200,50,50,0.8); }
+
+/* Card Values */
+.pcard-val {
+  position:absolute; font-family:'JetBrains Mono',sans-serif; font-weight:800; color:#fff;
+  text-shadow:1px 1px 0 rgba(0,0,0,0.5); z-index:2;
+}
+.pcard-val.tl { top:4px; left:6px; font-size:18px; }
+.pcard-val.br { bottom:4px; right:6px; font-size:18px; transform:rotate(180deg); }
+.pcard-val.center { 
+  top:50%; left:50%; transform:translate(-50%,-50%); font-size:54px; 
+  color:inherit; text-shadow:2px 2px 0 rgba(255,255,255,0.8), -1px -1px 0 rgba(0,0,0,0.3);
+}
+
+.pcard.color-red .pcard-val.center { color:var(--c-red); }
+.pcard.color-blue .pcard-val.center { color:var(--c-blue); }
+.pcard.color-green .pcard-val.center { color:var(--c-green); }
+.pcard.color-yellow .pcard-val.center { color:var(--c-yellow); }
+.pcard.color-wild .pcard-val.center { color:#333; text-shadow:none; }
+.pcard.color-dark .pcard-val.center { color:#fff; text-shadow:none; }
+
+/* Icons for Action Cards */
+.pcard-icon { width:40px; height:40px; z-index:2; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); }
+.pcard-icon svg { width:100%; height:100%; fill:currentColor; filter:drop-shadow(2px 2px 0px rgba(255,255,255,0.8)); }
+.pcard.color-red .pcard-icon { color:var(--c-red); }
+.pcard.color-blue .pcard-icon { color:var(--c-blue); }
+.pcard.color-green .pcard-icon { color:var(--c-green); }
+.pcard.color-yellow .pcard-icon { color:var(--c-yellow); }
+
+/* Interactions */
+.pcard.in-hand:hover { transform:translateY(-20px) scale(1.1) !important; z-index:50 !important; }
+.pcard.in-hand.invalid { filter:grayscale(80%) brightness(0.7); cursor:not-allowed; }
+.pcard.in-hand.invalid:hover { transform:translateY(-10px) !important; }
+
+/* Table Piles */
+.pile { position:relative; width:100px; height:150px; }
+.pile .pcard { position:absolute; top:0; left:0; transform:none; cursor:default; box-shadow:2px 2px 10px rgba(0,0,0,0.5); }
+#draw-pile { cursor:pointer; transition:transform 0.2s; }
+#draw-pile:hover { transform:scale(1.05); }
+#draw-pile .pcard { background:#fff; }
+#draw-pile::after {
+  content:'سحب'; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  font-weight:800; color:#fff; font-size:20px; z-index:10; pointer-events:none;
+}
+
+/* ==========================================================================
+   6. Chat & UI Overlays
+   ========================================================================== */
+#chat-overlay {
+  position:absolute; bottom:190px; left:20px; width:280px; max-height:250px; 
+  display:flex; flex-direction:column; justify-content:flex-end; gap:8px; z-index:30;
+  pointer-events:none; overflow:hidden;
+}
+.chat-msg {
+  background:rgba(29, 29, 42, 0.9); border:1px solid var(--b1); padding:8px 12px;
+  border-radius:12px; font-size:13px; color:var(--t0); backdrop-filter:blur(4px);
+  animation:slideIn 0.3s ease; pointer-events:auto; word-break:break-word;
+}
+.chat-msg.sys { text-align:center; background:rgba(108,99,255,0.2); border-color:var(--accent); font-weight:700; color:#fff; }
+.chat-input-wrapper { display:flex; gap:8px; pointer-events:auto; margin-top:4px; }
+.chat-input-wrapper input { padding:8px 12px; font-size:13px; min-height:40px; border-radius:10px; }
+.chat-input-wrapper button { min-height:40px; padding:0 14px; border-radius:10px; }
+
+@keyframes slideIn { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
+@keyframes pop { 0%{transform:scale(0.8); opacity:0;} 50%{transform:scale(1.2);} 100%{transform:scale(1); opacity:1;} }
+
+/* Color Picker Modal */
+.color-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem; }
+.color-btn { height:80px; border-radius:16px; border:4px solid transparent; cursor:pointer; transition:transform 0.2s; }
+.color-btn:hover { transform:scale(1.05); border-color:#fff; }
+.c-btn-r { background:var(--c-red); } .c-btn-b { background:var(--c-blue); }
+.c-btn-g { background:var(--c-green); } .c-btn-y { background:var(--c-yellow); }
+
+/* Screens Base */
+.screen { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:1.5rem; transition:opacity 0.4s; }
+.screen.hidden { opacity:0; pointer-events:none; display:none; }
+
+/* Utilities */
+.spinner { animation:spin 1s linear infinite; display:inline-block; }
+@keyframes spin { 100% {transform:rotate(360deg);} }
+.badge { background:var(--bg1); padding:4px 10px; border-radius:8px; font-family:'JetBrains Mono',monospace; letter-spacing:0.1em; color:var(--accent); border:1px solid var(--b1); font-size:16px; font-weight:800; margin:0 5px; }
+
+/* Uno Alert Huge Animation */
+#uno-alert {
+  position:fixed; top:50%; left:50%; transform:translate(-50%, -50%) scale(0);
+  font-size:120px; font-weight:900; color:var(--c-yellow); text-transform:uppercase;
+  text-shadow:0 0 40px rgba(234,179,8,0.8), 4px 4px 0 var(--c-red), -4px -4px 0 var(--c-blue);
+  z-index:9999; pointer-events:none; transition:all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+#uno-alert.show { transform:translate(-50%, -50%) scale(1); }
+
+</style>
+</head>
+<body>
+
+<!-- Global Toast -->
+<div id="toast"></div>
+
+<!-- =========================================================================
+     SCREEN: HOME
+     ========================================================================= -->
+<div id="view-home" class="screen">
+  <div class="card-ui" style="text-align:center;">
+    <div style="width:70px;height:70px;background:var(--adim);border:1px solid var(--aglow);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;">
+      <svg width="40" height="40" fill="none" stroke="var(--accent)" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+    </div>
+    <h1 style="font-size:28px; font-weight:800; margin-bottom:8px">أوراق مِرسال</h1>
+    <p style="color:var(--t1); font-size:14px; margin-bottom:2rem;">لعبة بطاقات تكتيكية مشفرة من جهاز لجهاز مباشرة، لا خوادم، متعة مضمونة.</p>
+    
+    <div style="display:flex; flex-direction:column; gap:1rem;">
+      <input type="text" id="playerName" placeholder="اسمك الكريم..." maxlength="12">
+      <div style="height:1px; background:var(--b0); margin:0.5rem 0;"></div>
+      
+      <button class="btn btn-p" onclick="App.createLobby()">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        إنشاء غرفة جديدة
+      </button>
+      
+      <div style="display:flex; gap:10px; margin-top:0.5rem">
+        <input type="text" id="joinId" placeholder="رمز الغرفة (6 أرقام)" maxlength="6" pattern="\d*" class="font-mono text-center">
+        <button class="btn btn-g" onclick="App.joinLobby()">انضمام</button>
+      </div>
+    </div>
+    <p style="margin-top:2rem; font-size:12px; color:var(--t2)">مطور بتقنية P2P WebRTC</p>
+  </div>
+</div>
+
+<!-- =========================================================================
+     SCREEN: LOBBY
+     ========================================================================= -->
+<div id="view-lobby" class="screen hidden">
+  <div class="card-ui" style="text-align:center;">
+    <h2 style="font-size:22px; font-weight:800; margin-bottom:0.5rem">غرفة الانتظار</h2>
+    <p style="font-size:14px; color:var(--t1);">شارك رمز الغرفة مع أصدقائك:</p>
+    
+    <div style="background:var(--bg1); border:1px solid var(--b1); padding:1rem; border-radius:16px; margin:1.5rem 0; display:flex; align-items:center; justify-content:center; gap:1rem;">
+      <span id="lobby-pin" class="font-mono" style="font-size:32px; font-weight:800; letter-spacing:0.15em;">------</span>
+      <button class="btn btn-g" style="min-height:40px; padding:0 12px; border-radius:10px;" onclick="App.copyPin()">نسخ</button>
+    </div>
+    
+    <div style="text-align:right; margin-bottom:1rem;">
+      <p style="font-size:13px; font-weight:700; color:var(--t2); margin-bottom:8px">اللاعبون المتصلون (<span id="player-count">1</span>/5):</p>
+      <ul id="players-list" style="list-style:none; display:flex; flex-direction:column; gap:8px;">
+        <!-- Player list dynamically added -->
+      </ul>
+    </div>
+    
+    <button id="btn-start-game" class="btn btn-p hidden" style="width:100%; margin-top:1rem;" onclick="App.startGame()">ابدأ اللعبة</button>
+    <p id="lbl-waiting-host" class="hidden" style="color:var(--accent); font-weight:700; font-size:14px; margin-top:1rem;">بانتظار المضيف لبدء اللعبة...</p>
+    <button class="btn btn-g" style="width:100%; margin-top:1rem; background:var(--bg1); color:var(--red); border-color:var(--c-red-dim)" onclick="location.reload()">مغادرة</button>
+  </div>
+</div>
+
+<!-- =========================================================================
+     SCREEN: GAME BOARD
+     ========================================================================= -->
+<div id="view-game" class="hidden">
+  
+  <header class="game-header">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <button class="btn btn-g" style="min-height:36px; padding:0 12px; border-radius:10px; font-size:12px;" onclick="App.openRules()">القوانين</button>
+    </div>
+    <div id="top-turn-indicator" class="turn-indicator">
+      دورك الآن
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:12px; color:var(--t1);">غرفة:</span>
+      <span id="game-pin-display" class="font-mono" style="color:var(--accent); font-weight:700;">------</span>
+    </div>
+  </header>
+
+  <div class="game-area">
+    
+    <!-- Direction indicator (Arrows) -->
+    <div id="dir-indicator" class="direction-indicator dir-cw">
+      <svg viewBox="0 0 100 100">
+        <path d="M 50 10 A 40 40 0 1 1 10 50" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="10 5" stroke-linecap="round"/>
+        <polygon points="10,50 0,35 20,35" fill="currentColor"/>
+      </svg>
+    </div>
+
+    <div id="opponents-area" class="opponents-container">
+      <!-- Generated Dynamically -->
+    </div>
+
+    <div class="center-table">
+      <!-- Draw Pile -->
+      <div id="draw-pile" class="pile" onclick="App.tryDrawCard()">
+        <div class="pcard color-dark"><div class="pcard-inner"></div></div>
+      </div>
+      <!-- Discard Pile (Top Card) -->
+      <div id="discard-pile" class="pile">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Active Color Badge (when wild is played) -->
+    <div id="active-color-display" style="position:absolute; bottom:200px; left:50%; transform:translateX(-50%); padding:6px 16px; border-radius:100px; font-weight:700; font-size:13px; color:#fff; display:none; box-shadow:0 4px 15px rgba(0,0,0,0.4); z-index:15;">
+      اللون المطلوب
+    </div>
+
+    <!-- Chat Overlay -->
+    <div id="chat-overlay">
+      <div id="chat-messages" style="display:flex; flex-direction:column; gap:6px; overflow-y:auto; max-height:200px; padding-bottom:4px;"></div>
+      <form class="chat-input-wrapper" onsubmit="App.sendChat(event)">
+        <input type="text" id="chat-inp" placeholder="رسالة..." autocomplete="off">
+        <button type="submit" class="btn btn-p"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="transform:rotate(180deg)"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg></button>
+      </form>
+    </div>
+
+  </div>
+
+  <div class="hand-container">
+    <div id="my-hand" class="my-cards">
+      <!-- Cards injected here -->
+    </div>
+  </div>
+
+</div>
+
+<!-- =========================================================================
+     MODALS
+     ========================================================================= -->
+<!-- Color Picker Modal -->
+<div id="colorModal" class="modal">
+  <div class="mbox">
+    <h3 style="font-size:20px; font-weight:800; text-align:center;">اختر لوناً</h3>
+    <div class="color-grid">
+      <div class="color-btn c-btn-r" onclick="App.resolveColor('red')"></div>
+      <div class="color-btn c-btn-b" onclick="App.resolveColor('blue')"></div>
+      <div class="color-btn c-btn-g" onclick="App.resolveColor('green')"></div>
+      <div class="color-btn c-btn-y" onclick="App.resolveColor('yellow')"></div>
+    </div>
+  </div>
+</div>
+
+<!-- End Game Modal -->
+<div id="endModal" class="modal">
+  <div class="mbox" style="text-align:center;">
+    <h2 style="font-size:32px; font-weight:900; color:var(--c-yellow); text-shadow:0 0 20px var(--c-yellow-dim); margin-bottom:10px;">انتهت اللعبة!</h2>
+    <p style="font-size:16px; margin-bottom:20px;">الفائز هو: <span id="winner-name" style="font-weight:800; color:var(--accent);">---</span></p>
+    <button class="btn btn-p" onclick="App.returnToLobby()" style="width:100%;">العودة للغرفة</button>
+  </div>
+</div>
+
+<!-- Rules Modal -->
+<div id="rulesModal" class="modal">
+  <div class="mbox">
+    <h3 style="font-size:20px; font-weight:800; border-bottom:1px solid var(--b1); padding-bottom:10px; margin-bottom:10px;">كيف تلعب؟</h3>
+    <ul style="font-size:13px; color:var(--t1); line-height:1.8; list-style-position:inside;">
+      <li>طابق البطاقة العليا في الكومة حسب <b>اللون</b> أو <b>الرقم</b> أو <b>الرمز</b>.</li>
+      <li>إذا لم يكن لديك ورقة مناسبة، <b>اسحب ورقة</b> من الكومة (اضغط على البطاقة المقلوبة).</li>
+      <li>بطاقة <b style="color:var(--c-blue)">تخطي</b>: تحرم اللاعب التالي من دوره.</li>
+      <li>بطاقة <b style="color:var(--c-green)">عكس</b>: تعكس اتجاه اللعب.</li>
+      <li>بطاقة <b style="color:var(--c-red)">سحب 2</b>: اللاعب التالي يسحب ورقتين ويفقد دوره.</li>
+      <li>بطاقة <b>تلوين</b>: يمكنك لعبها دائماً وتغيير اللون.</li>
+      <li>بطاقة <b>سحب 4</b>: تغير اللون وتجبر التالي على سحب 4 أوراق وفقدان دوره.</li>
+      <li>يصرخ النظام <b>أونو!</b> تلقائياً عندما تتبقى لديك ورقة واحدة. أول من ينهي أوراقه يفوز.</li>
+    </ul>
+    <button class="btn btn-g" onclick="closeModal('rulesModal')">حسناً، فهمت</button>
+  </div>
+</div>
+
+<div id="uno-alert">أونو!</div>
+
+<!-- =========================================================================
+     SCRIPTS
+     ========================================================================= -->
+<script>
+/**
+ * Utility Functions
+ */
+const U = {
+  id: () => Math.random().toString(36).substring(2, 9),
+  randInt: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
+  genPin: () => String(Math.floor(100000 + Math.random() * 900000)),
+  shuffle: (arr) => {
+    let curr = arr.length, rand;
+    while (curr != 0) {
+      rand = Math.floor(Math.random() * curr);
+      curr--;
+      [arr[curr], arr[rand]] = [arr[rand], arr[curr]];
+    }
+    return arr;
+  },
+  $id: (id) => document.getElementById(id),
+  show: (id) => U.$id(id).classList.remove('hidden'),
+  hide: (id) => U.$id(id).classList.add('hidden'),
+  toast: (msg) => {
+    const t = U.$id('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+};
+
+const openModal = (id) => { U.show(id); setTimeout(() => U.$id(id).classList.add('vis'), 10); };
+const closeModal = (id) => { U.$id(id).classList.remove('vis'); setTimeout(() => U.hide(id), 250); };
+
+/**
+ * Deck & Card Constants
+ */
+const CARD_COLORS = ['red', 'blue', 'green', 'yellow'];
+const ACTION_TYPES = ['skip', 'reverse', 'draw2'];
+const WILD_TYPES = ['wild', 'wild_draw4'];
+
+// Render SVG Icons for special cards
+const SVG = {
+  skip: `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/></svg>`,
+  reverse: `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2H7v2H5l3 3 3-3zM19 9l-3-3-3 3h2v2h2V9h2z"/></svg>`,
+  draw2: `<text x="50%" y="60%" font-size="20" font-family="'JetBrains Mono',monospace" font-weight="900" fill="currentColor" text-anchor="middle">+2</text>`,
+  wild: `<svg viewBox="0 0 24 24"><path d="M12 2A10 10 0 1022 12 10 10 0 0012 2zm-1 17.93a8 8 0 01-6.93-6.93h6.93zm0-8.93H4.07A8 8 0 0111 4.07zm2-6.93a8 8 0 016.93 6.93h-6.93zm0 8.93h6.93A8 8 0 0113 19.93z" fill="url(#wild-grad)"/></svg>`,
+  wild_draw4: `<text x="50%" y="60%" font-size="20" font-family="'JetBrains Mono',monospace" font-weight="900" fill="#333" text-anchor="middle" stroke="#fff" stroke-width="1">+4</text>`
+};
+
+/**
+ * NetManager: Handles PeerJS connection (Host & Client implementations unified via abstraction)
+ */
+class NetManager {
+  constructor() {
+    this.peer = null;
+    this.isHost = false;
+    this.pin = null;
+    this.myId = null;
+    this.conns = {}; // Clients connected to host
+    this.hostConn = null; // Client's connection to host
+    this.onStateRcv = null;
+    this.onActionRcv = null; // Host only
+  }
+
+  async initScript() {
+    return new Promise((res, rej) => {
+      if(window.Peer) return res();
+      const s = document.createElement('script');
+      s.src = "https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  async startHost(pin) {
+    await this.initScript();
+    this.isHost = true;
+    this.pin = pin;
+    const prefix = 'mersal_cards_'; 
+    return new Promise((res, rej) => {
+      this.peer = new Peer(prefix + pin, {
+        host: '0.peerjs.com', port: 443, secure: true,
+        config: { iceServers: [{urls:'stun:stun.l.google.com:19302'}] }
+      });
+      this.peer.on('open', id => { this.myId = id; res(id); });
+      this.peer.on('error', err => rej(err));
+      
+      this.peer.on('connection', conn => {
+        conn.on('open', () => {
+          this.conns[conn.peer] = conn;
+          conn.on('data', data => { if(this.onActionRcv) this.onActionRcv(conn.peer, data); });
+          conn.on('close', () => this._handleDrop(conn.peer));
+        });
+        conn.on('error', () => this._handleDrop(conn.peer));
+      });
+    });
+  }
+
+  async startClient(pin) {
+    await this.initScript();
+    this.isHost = false;
+    this.pin = pin;
+    return new Promise((res, rej) => {
+      this.peer = new Peer({
+        host: '0.peerjs.com', port: 443, secure: true,
+        config: { iceServers: [{urls:'stun:stun.l.google.com:19302'}] }
+      });
+      this.peer.on('open', id => {
+        this.myId = id;
+        this.hostConn = this.peer.connect('mersal_cards_' + pin, { reliable: true });
+        this.hostConn.on('open', () => res());
+        this.hostConn.on('data', data => { if(this.onStateRcv) this.onStateRcv(data); });
+        this.hostConn.on('error', err => rej(err));
+        this.hostConn.on('close', () => U.toast('انقطع الاتصال بالمضيف.'));
+      });
+      this.peer.on('error', err => rej(err));
+    });
+  }
+
+  _handleDrop(peerId) {
+    delete this.conns[peerId];
+    if(this.onActionRcv) this.onActionRcv(peerId, { type: 'LEAVE' });
+  }
+
+  sendState(state) { // Host -> All
+    if(!this.isHost) return;
+    Object.values(this.conns).forEach(c => { try { c.send(state); } catch(e){} });
+    if(this.onStateRcv) this.onStateRcv(state); // Host updates itself too
+  }
+
+  sendAction(action) { // Client -> Host
+    if(this.isHost) {
+      if(this.onActionRcv) this.onActionRcv(this.myId, action);
+    } else {
+      if(this.hostConn && this.hostConn.open) this.hostConn.send(action);
+    }
+  }
+}
+
+/**
+ * GameEngine: Holds rules, deck, and state (Runs ONLY on Host)
+ */
+class GameEngine {
+  constructor(net) {
+    this.net = net;
+    this.net.onActionRcv = this.handleAction.bind(this);
+    
+    this.state = {
+      status: 'LOBBY', // LOBBY, PLAYING, ENDED
+      players: [], // {id, netId, name, cards: [], cardCount, isConnected}
+      deck: [],
+      discard: [],
+      activeColor: null,
+      turnIndex: 0,
+      direction: 1, // 1 (CW), -1 (CCW)
+      winner: null
+    };
+  }
+
+  joinPlayer(netId, name) {
+    if(this.state.status !== 'LOBBY') return false;
+    if(this.state.players.length >= 5) return false;
+    if(this.state.players.find(p => p.netId === netId)) return true; // reconnect
+    this.state.players.push({ id: U.id(), netId, name, cards: [], cardCount: 0, isConnected: true });
+    this.broadcast();
+    return true;
+  }
+
+  removePlayer(netId) {
+    const p = this.state.players.find(p => p.netId === netId);
+    if(p) {
+      if(this.state.status === 'LOBBY') {
+        this.state.players = this.state.players.filter(pl => pl.netId !== netId);
+      } else {
+        p.isConnected = false;
+        // In real app, maybe skip turn. Simple here: let them hold cards.
+        if (this.state.players[this.state.turnIndex].id === p.id) this.nextTurn();
+      }
+      this.broadcast();
+    }
+  }
+
+  createDeck() {
+    let d = [];
+    CARD_COLORS.forEach(c => {
+      d.push({ id: U.id(), color: c, type: 'number', val: '0' });
+      for(let i=1; i<=9; i++) {
+        d.push({ id: U.id(), color: c, type: 'number', val: i.toString() });
+        d.push({ id: U.id(), color: c, type: 'number', val: i.toString() });
+      }
+      ACTION_TYPES.forEach(t => {
+        d.push({ id: U.id(), color: c, type: t, val: t });
+        d.push({ id: U.id(), color: c, type: t, val: t });
+      });
+    });
+    for(let i=0; i<4; i++) {
+      d.push({ id: U.id(), color: 'wild', type: 'wild', val: 'wild' });
+      d.push({ id: U.id(), color: 'wild', type: 'wild_draw4', val: 'wild_draw4' });
+    }
+    return U.shuffle(d);
+  }
+
+  startGame() {
+    if(this.state.players.length < 2) return;
+    this.state.status = 'PLAYING';
+    this.state.winner = null;
+    this.state.direction = 1;
+    this.state.deck = this.createDeck();
+    this.state.discard = [];
+    
+    // Deal 7 cards
+    this.state.players.forEach(p => { p.cards = []; });
+    for(let i=0; i<7; i++) {
+      this.state.players.forEach(p => p.cards.push(this.state.deck.pop()));
+    }
+    this.state.players.forEach(p => p.cardCount = p.cards.length);
+    
+    // First card
+    let startCard = this.state.deck.pop();
+    while(startCard.color === 'wild' || startCard.type === 'skip' || startCard.type === 'reverse' || startCard.type === 'draw2') {
+      this.state.deck.unshift(startCard);
+      startCard = this.state.deck.pop();
+    }
+    this.state.discard.push(startCard);
+    this.state.activeColor = startCard.color;
+    
+    this.state.turnIndex = U.randInt(0, this.state.players.length - 1);
+    this.broadcast();
+  }
+
+  isValidPlay(card) {
+    const top = this.state.discard[this.state.discard.length - 1];
+    if (card.color === 'wild') return true;
+    if (card.color === this.state.activeColor) return true;
+    if (card.val === top.val) return true;
+    return false;
+  }
+
+  nextTurn(step = 1) {
+    let nextIdx = this.state.turnIndex;
+    let attempts = 0;
+    while(attempts < this.state.players.length) {
+      nextIdx = (nextIdx + (step * this.state.direction)) % this.state.players.length;
+      if (nextIdx < 0) nextIdx += this.state.players.length;
+      if (this.state.players[nextIdx].isConnected) break;
+      attempts++;
+    }
+    this.state.turnIndex = nextIdx;
+  }
+
+  drawCards(playerIndex, count) {
+    let p = this.state.players[playerIndex];
+    let drawn = [];
+    for(let i=0; i<count; i++) {
+      if(this.state.deck.length === 0) {
+        if(this.state.discard.length <= 1) break; // totally empty
+        const top = this.state.discard.pop();
+        this.state.deck = U.shuffle(this.state.discard);
+        this.state.discard = [top];
+      }
+      const c = this.state.deck.pop();
+      p.cards.push(c);
+      drawn.push(c);
+    }
+    p.cardCount = p.cards.length;
+    return drawn;
+  }
+
+  handleAction(netId, action) {
+    if (action.type === 'JOIN') return this.joinPlayer(netId, action.name);
+    if (action.type === 'LEAVE') return this.removePlayer(netId);
+    
+    // Pass chat through directly to all
+    if (action.type === 'CHAT') {
+      const sender = this.state.players.find(p => p.netId === netId)?.name || 'مجهول';
+      this.net.sendState({ type: 'CHAT_MSG', msg: action.msg, sender });
+      return;
+    }
+
+    if (this.state.status !== 'PLAYING') return;
+    
+    const playerIndex = this.state.players.findIndex(p => p.netId === netId);
+    if (playerIndex === -1) return;
+    const player = this.state.players[playerIndex];
+
+    if (action.type === 'PLAY') {
+      if (playerIndex !== this.state.turnIndex) return; // Not turn
+      const cardIdx = player.cards.findIndex(c => c.id === action.cardId);
+      if(cardIdx === -1) return;
+      const card = player.cards[cardIdx];
+      
+      if(!this.isValidPlay(card)) return;
+
+      // Play it
+      player.cards.splice(cardIdx, 1);
+      player.cardCount = player.cards.length;
+      this.state.discard.push(card);
+      this.state.activeColor = (card.color === 'wild') ? action.selectedColor : card.color;
+
+      // Uno Alert (if 1 card left)
+      let unoFired = false;
+      if (player.cardCount === 1) {
+        unoFired = true;
+      } else if (player.cardCount === 0) {
+        this.state.status = 'ENDED';
+        this.state.winner = player.name;
+        this.broadcast();
+        return;
+      }
+
+      // Apply Effects
+      let turnStep = 1;
+      let nextPIdx = (this.state.turnIndex + this.state.direction) % this.state.players.length;
+      if (nextPIdx < 0) nextPIdx += this.state.players.length;
+
+      if (card.type === 'skip') { turnStep = 2; }
+      else if (card.type === 'reverse') { 
+        this.state.direction *= -1; 
+        if (this.state.players.filter(p => p.isConnected).length === 2) turnStep = 2; // reverse in 2p = skip
+      }
+      else if (card.type === 'draw2') {
+        this.drawCards(nextPIdx, 2); turnStep = 2;
+      }
+      else if (card.type === 'wild_draw4') {
+        this.drawCards(nextPIdx, 4); turnStep = 2;
+      }
+
+      this.nextTurn(turnStep);
+      this.broadcast(unoFired ? player.name : null);
+    }
+    
+    else if (action.type === 'DRAW') {
+      if (playerIndex !== this.state.turnIndex) return;
+      this.drawCards(playerIndex, 1);
+      this.nextTurn(1);
+      this.broadcast();
+    }
+  }
+
+  broadcast(unoCaller = null) {
+    // Sanitize state for clients: hide other's hands, full deck
+    const safePlayers = this.state.players.map(p => ({
+      id: p.id, netId: p.netId, name: p.name, cardCount: p.cardCount, isConnected: p.isConnected
+    }));
+
+    Object.values(this.net.conns).forEach(conn => {
+      const pIdx = this.state.players.findIndex(p => p.netId === conn.peer);
+      const myCards = pIdx !== -1 ? this.state.players[pIdx].cards : [];
+      conn.send({
+        type: 'GAME_STATE',
+        state: {
+          status: this.state.status, turnIndex: this.state.turnIndex,
+          direction: this.state.direction, activeColor: this.state.activeColor,
+          winner: this.state.winner, players: safePlayers,
+          topCard: this.state.discard[this.state.discard.length - 1] || null
+        },
+        myCards: myCards,
+        unoCaller
+      });
+    });
+
+    // Send to host local UI too
+    const hostIdx = this.state.players.findIndex(p => p.netId === this.net.myId);
+    this.net.onStateRcv({
+      type: 'GAME_STATE',
+      state: {
+        status: this.state.status, turnIndex: this.state.turnIndex,
+        direction: this.state.direction, activeColor: this.state.activeColor,
+        winner: this.state.winner, players: safePlayers,
+        topCard: this.state.discard[this.state.discard.length - 1] || null
+      },
+      myCards: hostIdx !== -1 ? this.state.players[hostIdx].cards : [],
+      unoCaller
+    });
+  }
+}
+
+/**
+ * App Logic & Rendering (Runs on Host & Client)
+ */
+const App = {
+  name: localStorage.getItem('mc_name') || '',
+  net: new NetManager(),
+  engine: null, // Only used if host
+  
+  // Client state map
+  gameState: null,
+  myCards: [],
+  myInternalId: null,
+  
+  pendingWildCardId: null, // holds id when playing a wild card waiting for color pick
+
+  init() {
+    const input = U.$id('playerName');
+    input.value = this.name;
+    input.onchange = e => { this.name = e.target.value.trim(); localStorage.setItem('mc_name', this.name); };
+    
+    // Bind network events
+    this.net.onStateRcv = (payload) => this.processNetData(payload);
+  },
+
+  async createLobby() {
+    if(!this.name) return U.toast('يرجى إدخال اسمك أولاً!');
+    try {
+      const btn = U.$id('view-home').querySelector('.btn-p');
+      btn.innerHTML = '<svg class="spinner" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg> جاري الإنشاء...';
+      btn.disabled = true;
+
+      const pin = U.genPin();
+      await this.net.startHost(pin);
+      this.engine = new GameEngine(this.net);
+      this.engine.joinPlayer(this.net.myId, this.name);
+      
+      U.$id('lobby-pin').textContent = pin;
+      U.hide('view-home'); U.show('view-lobby');
+      U.show('btn-start-game'); U.hide('lbl-waiting-host');
+      
+    } catch(err) {
+      U.toast('تعذر إنشاء الغرفة.');
+      console.error(err);
+      const btn = U.$id('view-home').querySelector('.btn-p');
+      btn.innerHTML = 'إنشاء غرفة جديدة'; btn.disabled = false;
+    }
+  },
+
+  async joinLobby() {
+    if(!this.name) return U.toast('يرجى إدخال اسمك أولاً!');
+    const pin = U.$id('joinId').value.trim();
+    if(pin.length !== 6) return U.toast('الرمز غير صحيح');
+    
+    try {
+      const btn = U.$id('view-home').querySelector('.btn-g');
+      btn.textContent = '...'; btn.disabled = true;
+
+      await this.net.startClient(pin);
+      this.net.sendAction({ type: 'JOIN', name: this.name });
+      
+      U.$id('lobby-pin').textContent = pin;
+      U.hide('view-home'); U.show('view-lobby');
+      U.hide('btn-start-game'); U.show('lbl-waiting-host');
+      
+    } catch(err) {
+      U.toast('لا يمكن الاتصال بالغرفة.');
+      const btn = U.$id('view-home').querySelector('.btn-g');
+      btn.textContent = 'انضمام'; btn.disabled = false;
+    }
+  },
+
+  startGame() {
+    if(this.engine) this.engine.startGame();
+  },
+  
+  returnToLobby() {
+    closeModal('endModal');
+    U.hide('view-game');
+    U.show('view-lobby');
+    if(this.engine) {
+      this.engine.state.status = 'LOBBY';
+      this.engine.broadcast();
+    }
+  },
+
+  processNetData(payload) {
+    if (payload.type === 'CHAT_MSG') {
+      this.renderChatMsg(payload.sender, payload.msg);
+      return;
+    }
+
+    if (payload.type === 'GAME_STATE') {
+      this.gameState = payload.state;
+      this.myCards = payload.myCards;
+      
+      const me = this.gameState.players.find(p => p.netId === this.net.myId);
+      this.myInternalId = me ? me.id : null;
+
+      if(this.gameState.status === 'LOBBY') {
+        U.show('view-lobby'); U.hide('view-game');
+        this.renderLobby();
+      } 
+      else if(this.gameState.status === 'PLAYING') {
+        U.hide('view-lobby'); U.show('view-game');
+        this.renderGame();
+        
+        // Uno Alert checking
+        if (payload.unoCaller) {
+          this.triggerUnoAlert(payload.unoCaller);
+        }
+      }
+      else if(this.gameState.status === 'ENDED') {
+        U.$id('winner-name').textContent = this.gameState.winner;
+        openModal('endModal');
+      }
+    }
+  },
+
+  /* ------------------- RENDERING ------------------- */
+  renderLobby() {
+    const list = U.$id('players-list');
+    list.innerHTML = '';
+    const pls = this.gameState.players;
+    U.$id('player-count').textContent = pls.length;
+    
+    pls.forEach(p => {
+      const li = document.createElement('li');
+      li.style.cssText = 'padding:10px 14px; background:var(--bg2); border:1px solid var(--b1); border-radius:12px; display:flex; justify-content:space-between; align-items:center;';
+      li.innerHTML = `
+        <span style="font-weight:700;">${p.name}</span>
+        ${p.netId === this.net.myId ? '<span class="badge" style="font-size:12px">أنت</span>' : ''}
+      `;
+      list.appendChild(li);
+    });
+    
+    if (this.engine) {
+      const btn = U.$id('btn-start-game');
+      if(pls.length >= 2) { btn.disabled=false; btn.textContent='ابدأ اللعبة'; }
+      else { btn.disabled=true; btn.textContent='بانتظار لاعبين آخرين...'; }
+    }
+  },
+
+  renderGame() {
+    U.$id('game-pin-display').textContent = this.net.pin;
+
+    // Draw Opponents
+    const oppCont = U.$id('opponents-area');
+    oppCont.innerHTML = '';
+    let myIdx = this.gameState.players.findIndex(p => p.id === this.myInternalId);
+    if(myIdx === -1) myIdx = 0; // Spectator fallback
+    
+    const activePlayerId = this.gameState.players[this.gameState.turnIndex].id;
+    const isMyTurn = activePlayerId === this.myInternalId;
+
+    // Turn Indicators
+    const topInd = U.$id('top-turn-indicator');
+    if(isMyTurn) {
+      topInd.className = 'turn-indicator my-turn';
+      topInd.innerHTML = '★ دورك الآن العب ورقة!';
+    } else {
+      topInd.className = 'turn-indicator';
+      topInd.innerHTML = `دور: ${this.gameState.players[this.gameState.turnIndex].name}`;
+    }
+
+    // Sort players so they wrap around the user in UI
+    let orderedPlayers = [];
+    for(let i=1; i<this.gameState.players.length; i++) {
+      orderedPlayers.push(this.gameState.players[(myIdx + i) % this.gameState.players.length]);
+    }
+
+    orderedPlayers.forEach(p => {
+      const isTurn = p.id === activePlayerId;
+      const el = document.createElement('div');
+      el.className = `opponent ${isTurn ? 'active' : ''} ${!p.isConnected ? 'disconnected' : ''}`;
+      el.innerHTML = `
+        <div class="opponent-avatar">
+          ${p.name.charAt(0)}
+          <div class="opponent-cards">${p.cardCount}</div>
+        </div>
+        <div class="opponent-name">${p.name}</div>
+      `;
+      oppCont.appendChild(el);
+    });
+
+    // Center Table & Direction
+    const dirInd = U.$id('dir-indicator');
+    if (this.gameState.direction === 1) { dirInd.classList.remove('dir-ccw'); dirInd.classList.add('dir-cw'); }
+    else { dirInd.classList.remove('dir-cw'); dirInd.classList.add('dir-ccw'); }
+
+    // Top Card
+    const disc = U.$id('discard-pile');
+    disc.innerHTML = '';
+    if(this.gameState.topCard) {
+      disc.appendChild(this.createCardDOM(this.gameState.topCard, false));
+    }
+    
+    // Active Color display (if wild played)
+    const acDisp = U.$id('active-color-display');
+    if (this.gameState.topCard && this.gameState.topCard.color === 'wild') {
+      const cMap = {red:'أحمر', blue:'أزرق', green:'أخضر', yellow:'أصفر'};
+      acDisp.style.display = 'block';
+      acDisp.style.background = `var(--c-${this.gameState.activeColor})`;
+      acDisp.textContent = `اللون المطلوب: ${cMap[this.gameState.activeColor]}`;
+    } else {
+      acDisp.style.display = 'none';
+    }
+
+    // My Hand
+    const hand = U.$id('my-hand');
+    hand.innerHTML = '';
+    
+    this.myCards.sort((a,b) => {
+      if(a.color === b.color) return String(a.val).localeCompare(String(b.val));
+      return a.color.localeCompare(b.color);
+    });
+
+    const rotStep = this.myCards.length > 5 ? 30 / this.myCards.length : 5;
+    const baseRot = - ((this.myCards.length-1) * rotStep) / 2;
+
+    this.myCards.forEach((c, idx) => {
+      const cd = this.createCardDOM(c, true);
+      const isPlayable = isMyTurn && this.isValidMoveCheckLocal(c);
+      if(!isPlayable && isMyTurn) cd.classList.add('invalid');
+      
+      const rot = baseRot + (idx * rotStep);
+      const transY = Math.abs(rot) * 0.8;
+      cd.style.transform = `rotate(${rot}deg) translateY(${transY}px)`;
+      
+      cd.onclick = () => {
+        if(!isPlayable) return U.toast('لا يمكنك لعب هذه البطاقة الآن');
+        if(c.color === 'wild') {
+          this.pendingWildCardId = c.id;
+          openModal('colorModal');
+        } else {
+          this.net.sendAction({ type: 'PLAY', cardId: c.id });
+        }
+      };
+      hand.appendChild(cd);
+    });
+  },
+
+  createCardDOM(c, inHand = false) {
+    const el = document.createElement('div');
+    el.className = `pcard color-${c.color} ${inHand ? 'in-hand' : ''}`;
+    
+    let inner = `<div class="pcard-inner">
+      <div class="pcard-val tl">${c.type === 'number' ? c.val : ''}</div>
+      <div class="pcard-val br">${c.type === 'number' ? c.val : ''}</div>`;
+      
+    if (c.type === 'number') {
+      inner += `<div class="pcard-val center">${c.val}</div>`;
+    } else {
+      let icon = SVG[c.type] || '';
+      if(c.type === 'wild' || c.type === 'wild_draw4') {
+        inner = `<svg width="0" height="0"><defs><linearGradient id="wild-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="25%" stop-color="#ef4444"/><stop offset="50%" stop-color="#eab308"/><stop offset="75%" stop-color="#22c55e"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient></defs></svg>` + inner;
+      }
+      inner += `<div class="pcard-icon">${icon}</div>`;
+    }
+    
+    inner += `</div>`;
+    el.innerHTML = inner;
+    return el;
+  },
+
+  isValidMoveCheckLocal(card) {
+    if(!this.gameState || !this.gameState.topCard) return false;
+    const top = this.gameState.topCard;
+    if (card.color === 'wild') return true;
+    if (card.color === this.gameState.activeColor) return true;
+    if (card.val === top.val) return true;
+    return false;
+  },
+
+  /* ------------------- ACTIONS ------------------- */
+  tryDrawCard() {
+    const activePlayerId = this.gameState.players[this.gameState.turnIndex].id;
+    if(activePlayerId !== this.myInternalId) return U.toast('ليس دورك');
+    this.net.sendAction({ type: 'DRAW' });
+  },
+
+  resolveColor(c) {
+    closeModal('colorModal');
+    if(this.pendingWildCardId) {
+      this.net.sendAction({ type: 'PLAY', cardId: this.pendingWildCardId, selectedColor: c });
+      this.pendingWildCardId = null;
+    }
+  },
+  
+  copyPin() {
+    navigator.clipboard.writeText(this.net.pin).then(() => U.toast('تم نسخ الرمز'));
+  },
+
+  openRules() { openModal('rulesModal'); },
+
+  /* ------------------- CHAT & UX ------------------- */
+  sendChat(e) {
+    e.preventDefault();
+    const inp = U.$id('chat-inp');
+    const msg = inp.value.trim();
+    if(!msg) return;
+    this.net.sendAction({ type: 'CHAT', msg });
+    inp.value = '';
+  },
+
+  renderChatMsg(sender, msg) {
+    const cont = U.$id('chat-messages');
+    const d = document.createElement('div');
+    if (sender === 'SYS') d.className = 'chat-msg sys';
+    else {
+      d.className = 'chat-msg';
+      d.innerHTML = `<b style="color:var(--accent2);">${sender}:</b> ${msg.replace(/</g, "&lt;")}`;
+    }
+    cont.appendChild(d);
+    cont.scrollTop = cont.scrollHeight;
+    setTimeout(()=> {
+      if(cont.children.length > 10) cont.firstChild.remove();
+    }, 15000); // clear chat history over time
+  },
+
+  triggerUnoAlert(name) {
+    const alert = U.$id('uno-alert');
+    alert.innerHTML = `أونو!<br><span style="font-size:40px; color:#fff">${name}</span>`;
+    alert.classList.add('show');
+    this.renderChatMsg('SYS', `أونو! ${name} بقيت لديه ورقة واحدة!`);
+    setTimeout(() => alert.classList.remove('show'), 2000);
+  }
+};
+
+window.onload = () => App.init();
+
+</script>
+</body>
+</html>
