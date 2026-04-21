@@ -49,18 +49,24 @@
 }
 
 /* ══════════════════════════════════════
-   RESET
+   RESET & NATIVE FEEL
 ══════════════════════════════════════ */
 *, *::before, *::after {
   box-sizing: border-box; margin: 0; padding: 0;
   -webkit-tap-highlight-color: transparent;
   user-select: none; -webkit-touch-callout: none;
 }
+
+/* Hide scrollbars for native app feel */
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; -ms-overflow-style: none; }
+
 html, body {
   width: 100%; height: 100%;
   background: var(--bg); color: var(--ink);
   font-family: 'Tajawal', sans-serif;
-  overflow: hidden; overscroll-behavior: none;
+  overflow: hidden; 
+  overscroll-behavior-y: none; /* Prevents pull-to-refresh */
   -webkit-text-size-adjust: 100%;
 }
 input, textarea { user-select: auto; -webkit-user-select: text; }
@@ -382,7 +388,7 @@ button:disabled { opacity:.35; cursor:not-allowed; }
 .t-track { fill:none; stroke:var(--bg5); stroke-width:4; }
 .t-arc   { fill:none; stroke:var(--grn); stroke-width:4; stroke-linecap:round;
            stroke-dasharray:131.95; stroke-dashoffset:0;
-           transition:stroke-dashoffset .95s linear, stroke .4s; }
+           transition:stroke-dashoffset .2s linear, stroke .4s; }
 .t-num {
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
   font-family:'Cairo',sans-serif; font-size:1.15rem; font-weight:900;
@@ -692,10 +698,6 @@ button:disabled { opacity:.35; cursor:not-allowed; }
   overflow:hidden; text-overflow:ellipsis;
 }
 #toast.show { top:calc(var(--safe-t) + 13px); }
-
-/* scrollbar */
-::-webkit-scrollbar { width:3px; }
-::-webkit-scrollbar-thumb { background:var(--bg4); border-radius:3px; }
 
 /* ══════════════════════════════════════
    RESPONSIVE
@@ -1118,6 +1120,10 @@ function bindUI(){
   inps.forEach((inp,i)=>{
     inp.addEventListener('input',checkReady);
     inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault(); i<inps.length-1?inps[i+1].focus():inp.blur();} });
+    // Native Feel: Scroll input to center when focused so keyboard doesn't hide it
+    inp.addEventListener('focus', () => {
+      setTimeout(() => inp.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+    });
   });
   document.getElementById('btn-stop').addEventListener('click',pressStop);
   document.getElementById('btn-end-hdr').addEventListener('click',()=>hostInitiateVote());
@@ -1280,6 +1286,7 @@ function hostOnDisconn(pid){
   if(!S.players[pid]) return;
   toast(S.players[pid].name+' غادر','err');
   
+  // Bug Fix: Only decrement answersIn if they actually submitted
   if (S.players[pid].hasSubmitted) S.answersIn--;
   delete S.players[pid]; delete S.clientConns[pid]; delete _rateTs[pid];
   
@@ -1469,8 +1476,9 @@ function hostStartRound(){
   hostBcast({type:'ROULETTE',letter:chosen,round:S.round,max:S.maxRounds,time:S.roundTime});
   playRoulette(chosen,S.round,S.maxRounds,()=>{
     S.phase='PLAYING';
-    hostBcast({type:'START_PLAY',time:S.roundTime});
-    beginPlay();
+    const targetEndTimeMs = Date.now() + (S.roundTime * 1000);
+    hostBcast({type:'START_PLAY',time:S.roundTime, endTime: targetEndTimeMs});
+    beginPlay(targetEndTimeMs);
   });
 }
 
@@ -1479,8 +1487,9 @@ function triggerEmerg(pid){
   S.emergency=true;
   const nm=S.players[pid]?S.players[pid].name:'لاعب';
   const t=Math.min(S.timeLeft,10);
-  hostBcast({type:'EMERGENCY',name:nm,time:t});
-  clientOnEmerg(nm,t);
+  const targetEndTimeMs = Date.now() + (t * 1000);
+  hostBcast({type:'EMERGENCY',name:nm,time:t, endTime: targetEndTimeMs});
+  clientOnEmerg(nm,t, targetEndTimeMs);
 }
 
 function hostCheckAll(){
@@ -1512,7 +1521,7 @@ function hostDoReview(){
 
 function hostSyncReview(){
   hostBcast({type:'SYNC_REVIEW',data:S.scoredData});
-  renderReview(S.scoredData);
+  renderReview(S.scoredData, true); // Pass true to do in-place update if possible
 }
 
 function cycleScore(catId,pid){
@@ -1584,11 +1593,11 @@ function clientOnData(data){
       S.maxRounds=data.max; S.roundTime=data.time;
       playRoulette(data.letter,data.round,data.max,null); break;
     case 'START_PLAY':
-      S.phase='PLAYING'; beginPlay(); startTimer(data.time); break;
+      S.phase='PLAYING'; beginPlay(data.endTime); break;
     case 'EMERGENCY':
-      clientOnEmerg(data.name,data.time); break;
+      clientOnEmerg(data.name,data.time,data.endTime); break;
     case 'SYNC_REVIEW':
-      S.scoredData=data.data||{}; renderReview(S.scoredData); break;
+      S.scoredData=data.data||{}; renderReview(S.scoredData, true); break;
     case 'GAME_OVER':
       S.players=data.players||{}; clientShowEnd(S.players); break;
 
@@ -1678,7 +1687,7 @@ function playRoulette(letter,rnd,maxR,onDone){
 /* ═══════════════════════════════
    BEGIN PLAY
 ═══════════════════════════════ */
-function beginPlay(){
+function beginPlay(targetEndTimeMs){
   S.phase='PLAYING'; S.emergency=false;
 
   const lv=document.getElementById('g-letter');
@@ -1706,24 +1715,52 @@ function beginPlay(){
 
   showScreen('s-game');
   if(window.innerWidth>600) setTimeout(()=>document.getElementById('inp-1').focus(),350);
-  if(S.isHost) startTimer(S.roundTime);
+  
+  // Start timer using absolute end time to prevent drift
+  startTimer(S.roundTime, targetEndTimeMs);
 }
 
 /* ═══════════════════════════════
-   TIMER
+   DRIFT-FREE TIMER
 ═══════════════════════════════ */
-function startTimer(dur){
+function startTimer(dur, targetEndTimeMs){
   clearInterval(S.timerInt);
-  S.timerDur=dur; S.timeLeft=dur;
-  updateTimerUI(dur,dur);
-  S.timerInt=setInterval(()=>{
-    S.timeLeft--;
-    updateTimerUI(S.timeLeft,S.timerDur);
-    const tw=document.getElementById('twrap');
-    if(S.timeLeft<=10){ tw.classList.add('danger');tw.classList.remove('warn'); Snd.tickFast(); vib(8); }
-    else if(S.timeLeft<=20){ tw.classList.add('warn');tw.classList.remove('danger'); Snd.tick(); }
-    if(S.timeLeft<=0){ clearInterval(S.timerInt); onTimeUp(); }
-  },1000);
+  S.timerDur = dur;
+  
+  // Use absolute time to prevent drift if device lags or switches apps
+  const target = targetEndTimeMs || (Date.now() + dur * 1000);
+  
+  // Force immediate UI update
+  S.timeLeft = -1; 
+  
+  function tick() {
+    let left = Math.ceil((target - Date.now()) / 1000);
+    if(left < 0) left = 0;
+    
+    // Only update UI if the second actually changed
+    if(left !== S.timeLeft) {
+      S.timeLeft = left;
+      updateTimerUI(S.timeLeft, S.timerDur);
+      
+      const tw=document.getElementById('twrap');
+      if(S.timeLeft<=10 && S.timeLeft>0){ 
+        tw.classList.add('danger'); tw.classList.remove('warn'); 
+        Snd.tickFast(); vib(8); 
+      }
+      else if(S.timeLeft<=20 && S.timeLeft>10){ 
+        tw.classList.add('warn'); tw.classList.remove('danger'); 
+        Snd.tick(); 
+      }
+    }
+    
+    if(S.timeLeft <= 0){ 
+      clearInterval(S.timerInt); 
+      onTimeUp(); 
+    }
+  }
+  
+  tick(); // run once immediately
+  S.timerInt = setInterval(tick, 200); // Check frequently, but UI only updates on second change
 }
 
 function updateTimerUI(cur,total){
@@ -1785,7 +1822,7 @@ function pressStop(){
 /* ═══════════════════════════════
    EMERGENCY
 ═══════════════════════════════ */
-function clientOnEmerg(name,time){
+function clientOnEmerg(name,time,targetEndTimeMs){
   S.emergency=true;
   document.getElementById('emrg-txt').textContent=sanitizeName(name)+' أوقف الجولة! أسرع على الإجابة!';
   document.getElementById('emrg-box').classList.add('show');
@@ -1794,19 +1831,39 @@ function clientOnEmerg(name,time){
   Snd.siren(); vib([150,60,150,60,200]);
   document.getElementById('twrap').classList.add('danger');
   document.getElementById('flash').classList.add('flash-on');
-  startTimer(time);
+  startTimer(time, targetEndTimeMs);
 }
 
 /* ═══════════════════════════════
    REVIEW RENDER
 ═══════════════════════════════ */
-function renderReview(data){
+function renderReview(data, isUpdate=false){
+  const body=document.getElementById('review-body');
+
+  // In-place update to prevent scroll jumping when host clicks a score
+  if(isUpdate && S.phase==='REVIEW' && body.innerHTML !== ''){
+    Object.keys(CATS).forEach(catId=>{
+      (data[catId]||[]).forEach(e=>{
+        const el = document.getElementById(`score-${catId}-${e.pid}`);
+        if(el){
+          if(S.isHost && e.rawWord){
+            el.className = `cyc-btn ${e.pts===10?'c10':e.pts===5?'c5':'c0'}`;
+            el.textContent = `${e.pts} نقطة`;
+          } else if(!S.isHost && e.rawWord) {
+            el.className = `pts-pill ${e.pts===10?'p10':e.pts===5?'p5':'p0'}`;
+            el.textContent = `+${e.pts}`;
+          }
+        }
+      });
+    });
+    return;
+  }
+
   S.phase='REVIEW'; showScreen('s-review');
   document.getElementById('rev-host-banner').style.display=S.isHost?'':'none';
   document.getElementById('rev-wait-banner').style.display=S.isHost?'none':'';
   document.getElementById('rev-host-controls').style.display=S.isHost?'flex':'none';
 
-  const body=document.getElementById('review-body');
   body.innerHTML='';
 
   Object.keys(CATS).forEach(catId=>{
@@ -1828,10 +1885,12 @@ function renderReview(data){
       let scoreHtml;
       if(S.isHost&&e.rawWord){
         const cls=e.pts===10?'c10':e.pts===5?'c5':'c0';
-        scoreHtml=`<button class="cyc-btn ${cls}" data-cat="${esc(catId)}" data-pid="${esc(e.pid)}">${e.pts} نقطة</button>`;
-      } else {
+        scoreHtml=`<button class="cyc-btn ${cls}" id="score-${esc(catId)}-${esc(e.pid)}" data-cat="${esc(catId)}" data-pid="${esc(e.pid)}">${e.pts} نقطة</button>`;
+      } else if (e.rawWord) {
         const cls=e.pts===10?'p10':e.pts===5?'p5':'p0';
-        scoreHtml=`<span class="pts-pill ${cls}">+${e.pts}</span>`;
+        scoreHtml=`<span class="pts-pill ${cls}" id="score-${esc(catId)}-${esc(e.pid)}">+${e.pts}</span>`;
+      } else {
+        scoreHtml=`<span class="pts-pill p0" style="opacity:0.3" id="score-${esc(catId)}-${esc(e.pid)}">0</span>`;
       }
 
       const card=document.createElement('div');
