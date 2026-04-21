@@ -2,9 +2,12 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#4f46e5">
-    <title>إنسان حيوان - لعبة السرعة والكلمات</title>
+    <!-- إعدادات الهاتف (PWA & Native Feel) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <title>إنسان حيوان - لعبة السرعة</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Changa:wght@600;800&display=swap" rel="stylesheet">
     
@@ -24,12 +27,13 @@
             --text-light: #f8fafc;
             --text-muted: #94a3b8;
             --success: #10b981;
+            --warning: #eab308;
             --danger: #ef4444;
             --border-radius: 16px;
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-touch-callout: none; }
 
         html, body {
             width: 100%; height: 100%;
@@ -37,6 +41,7 @@
             color: var(--text-light);
             font-family: 'Cairo', sans-serif;
             overflow: hidden; 
+            overscroll-behavior-y: none; /* تعطيل سحب التحديث في الهواتف */
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -58,18 +63,14 @@
             cursor: pointer; transition: var(--transition);
             border-radius: 12px; font-weight: 700; font-size: 1.1rem;
             display: flex; align-items: center; justify-content: center; gap: 8px;
+            touch-action: manipulation;
         }
-        button:active:not(:disabled) { transform: scale(0.96); }
+        button:active:not(:disabled) { transform: scale(0.94); }
         button:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(80%); }
 
         .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); color: white; padding: 14px 28px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4); }
-        .btn-primary:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(79, 70, 229, 0.6); transform: translateY(-2px); }
-
         .btn-secondary { background: linear-gradient(135deg, var(--secondary), var(--secondary-hover)); color: white; padding: 14px 28px; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4); }
-        .btn-secondary:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(236, 72, 153, 0.6); transform: translateY(-2px); }
-
         .btn-danger { background: var(--danger); color: white; padding: 10px 20px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); border-radius: 8px; font-size: 0.95rem; }
-
         .btn-outline { background: transparent; border: 2px solid var(--text-muted); color: var(--text-light); padding: 12px 24px; }
         .btn-outline:hover:not(:disabled) { border-color: var(--text-light); background: rgba(255,255,255,0.05); }
 
@@ -78,14 +79,12 @@
             padding: 14px 18px; border-radius: 12px; font-family: 'Cairo', sans-serif;
             font-size: 16px; font-weight: 700; outline: none; transition: var(--transition);
             width: 100%; text-align: right; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-            user-select: auto;
+            user-select: auto; touch-action: manipulation;
         }
-        input:focus { border-color: var(--primary); background: #1e293b; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2), inset 0 2px 4px rgba(0,0,0,0.2); }
+        input:focus { border-color: var(--primary); background: #1e293b; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2); }
         input::placeholder { color: var(--text-muted); font-weight: 400; font-size: 1rem; }
 
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; } /* إخفاء سكرول بار للموبايل */
 
         /* =========================================================================
            3. التخطيط والشاشات
@@ -93,16 +92,17 @@
         .screen {
             position: absolute; inset: 0; display: flex; flex-direction: column;
             align-items: center; justify-content: flex-start;
-            opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
-            z-index: 10; padding: 20px; overflow-y: auto; overflow-x: hidden;
+            opacity: 0; pointer-events: none; transition: opacity 0.4s ease, transform 0.4s ease;
+            z-index: 10; padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom) 20px; 
+            overflow-y: auto; overflow-x: hidden; transform: translateY(20px);
         }
-        .screen.active { opacity: 1; pointer-events: auto; z-index: 20; }
+        .screen.active { opacity: 1; pointer-events: auto; z-index: 20; transform: translateY(0); }
 
         .container { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 20px; margin: 0 auto; padding-bottom: 40px; }
         .card { background: var(--bg-card); border-radius: var(--border-radius); padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); }
 
         /* =========================================================================
-           4. واجهة الدخول
+           4. واجهة الدخول والغرفة
            ========================================================================= */
         .logo-wrap { text-align: center; margin-bottom: 10px; margin-top: 5vh;}
         .logo-title { font-size: 4rem; background: linear-gradient(to left, #60a5fa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 4px 20px rgba(192, 132, 252, 0.3); line-height: 1.2; }
@@ -110,16 +110,15 @@
         .avatars-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 15px 0; }
         .avatar-btn { width: 55px; height: 55px; font-size: 1.8rem; border-radius: 50%; background: var(--bg-input); display: flex; align-items: center; justify-content: center; border: 3px solid transparent; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .avatar-btn.selected { border-color: var(--accent); background: rgba(245, 158, 11, 0.2); transform: scale(1.15); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); }
-        .avatar-btn.no-emoji { font-size: 1rem; font-weight: 800; color: var(--text-muted); }
-
-        .divider { display: flex; align-items: center; text-align: center; color: var(--text-muted); font-size: 0.9rem; margin: 10px 0; }
-        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #334155; margin: 0 15px; }
+        .avatar-btn.no-emoji { font-size: 0.9rem; font-weight: 800; color: var(--text-muted); }
 
         .lobby-code-box { background: rgba(0,0,0,0.2); border: 2px dashed var(--text-muted); padding: 15px; border-radius: var(--border-radius); text-align: center; cursor: pointer; transition: var(--transition); margin-bottom: 15px; }
-        .lobby-code-box:hover { border-color: var(--primary); background: rgba(79, 70, 229, 0.1); }
+        .lobby-code-box:active { background: rgba(79, 70, 229, 0.2); transform: scale(0.98); }
         .code-display { font-family: monospace; font-size: 2.8rem; color: var(--accent); letter-spacing: 10px; font-weight: 900; }
 
-        .player-row { display: flex; align-items: center; justify-content: space-between; background: var(--bg-input); padding: 12px 16px; border-radius: 12px; margin-bottom: 10px; }
+        .player-row { display: flex; align-items: center; justify-content: space-between; background: var(--bg-input); padding: 12px 16px; border-radius: 12px; margin-bottom: 10px; animation: slideIn 0.3s ease forwards;}
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        
         .p-info { display: flex; align-items: center; gap: 12px; flex: 1;}
         .p-ava { font-size: 1.8rem; }
         .p-name { font-size: 1.1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
@@ -130,13 +129,12 @@
            ========================================================================= */
         .game-header {
             display: flex; justify-content: space-between; align-items: center;
-            background: rgba(30, 41, 59, 0.9); padding: 12px 20px;
+            background: rgba(30, 41, 59, 0.95); padding: 12px 20px;
             border-radius: var(--border-radius); position: sticky; top: 10px; z-index: 50;
             box-shadow: 0 10px 30px rgba(0,0,0,0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05);
         }
         
         .letter-display { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .lbl-letter { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; }
         .val-letter { font-family: 'Changa'; font-size: 2.5rem; color: var(--accent); line-height: 1; text-shadow: 0 0 15px rgba(245, 158, 11, 0.5); }
         
         .timer-display { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 55px; height: 55px; border-radius: 50%; background: var(--bg-input); border: 3px solid var(--text-muted); transition: 0.3s;}
@@ -145,8 +143,7 @@
         @keyframes emergency-pulse { 0% { border-color: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); transform:scale(1);} 50% { border-color: #991b1b; box-shadow: 0 0 30px rgba(239, 68, 68, 0.8); transform:scale(1.05);} 100% { border-color: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); transform:scale(1);} }
         .timer-display.emergency { animation: emergency-pulse 0.5s infinite; color: var(--danger); background: rgba(239, 68, 68, 0.1); }
         
-        .play-area { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
-        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-group { display: flex; flex-direction: column; gap: 6px; position: relative; }
         .input-group label { font-size: 1rem; font-weight: 800; color: var(--text-light); padding-right: 5px; display: flex; align-items: center; gap: 8px; }
         
         .btn-stop-game {
@@ -155,58 +152,58 @@
             border-radius: 16px; box-shadow: 0 10px 25px rgba(225, 29, 72, 0.5);
             margin-top: 10px; border: 3px solid #fff; transition: 0.3s;
         }
-        .btn-stop-game:hover:not(:disabled) { transform: scale(1.02); box-shadow: 0 15px 35px rgba(225, 29, 72, 0.7); }
-        @keyframes wobble { 0%,100%{transform:rotate(0deg);} 25%{transform:rotate(-2deg);} 75%{transform:rotate(2deg);} }
-        .btn-stop-game.ready { animation: wobble 0.5s infinite; }
+        @keyframes wobble { 0%,100%{transform:rotate(0deg) scale(1.02);} 25%{transform:rotate(-2deg) scale(1.02);} 75%{transform:rotate(2deg) scale(1.02);} }
+        .btn-stop-game.ready { animation: wobble 0.5s infinite; box-shadow: 0 15px 35px rgba(225, 29, 72, 0.8); background: linear-gradient(135deg, #ef4444, #b91c1c); }
 
         /* =========================================================================
-           6. المراجعة
+           6. المراجعة والتقييم
            ========================================================================= */
         .review-section { margin-bottom: 20px; background: rgba(0,0,0,0.2); border-radius: var(--border-radius); padding: 12px; border: 1px solid #334155; }
         .review-header { display: flex; align-items: center; gap: 10px; font-size: 1.3rem; color: var(--accent); margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
         
-        .answer-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); padding: 10px 12px; border-radius: 12px; margin-bottom: 8px; gap: 10px;}
-        .answer-row.rejected { opacity: 0.7; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.4); }
+        .answer-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); padding: 10px 12px; border-radius: 12px; margin-bottom: 8px; gap: 10px; transition: 0.3s;}
+        .answer-row.rejected { opacity: 0.6; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .answer-row.warned { background: rgba(234, 179, 8, 0.05); border: 1px solid rgba(234, 179, 8, 0.3); }
         
         .a-player { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
-        .a-player span.name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;}
         .a-word { font-size: 1.1rem; font-weight: 800; color: white; flex: 1.2; text-align: center; word-break: break-word; }
-        .a-score { display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex: 1.2; }
+        .a-score { display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex: 1; }
         
+        /* زر التحكم بالنقاط للقائد */
+        .btn-cycle-score { width: 45px; height: 35px; border-radius: 8px; font-family: monospace; font-size: 1.1rem; font-weight: 900; border: none; cursor: pointer; transition: 0.2s; }
+        .btn-cycle-score.s-10 { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+        .btn-cycle-score.s-5 { background: rgba(234, 179, 8, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+        .btn-cycle-score.s-0 { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+        .btn-cycle-score:active { transform: scale(0.9); }
+
         .a-pts { font-family: monospace; font-size: 1.3rem; font-weight: 900; width: 35px; text-align: center; }
         .pts-10 { color: var(--success); text-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
-        .pts-5 { color: var(--accent); }
+        .pts-5 { color: var(--warning); }
         .pts-0 { color: var(--danger); text-decoration: line-through; }
 
         /* =========================================================================
-           7. إضافات عامة
+           7. إضافات عامة (Roulette & Toasts)
            ========================================================================= */
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; }
         .overlay.active { display: flex; }
-        .roulette-box { background: var(--bg-card); padding: 30px; border-radius: 30px; border: 4px solid var(--accent); text-align: center; box-shadow: 0 0 50px rgba(245, 158, 11, 0.3); width: 90%; max-width: 400px; }
-        .r-title { font-size: 1.5rem; color: var(--text-light); margin-bottom: 20px; font-weight: 700;}
-        .r-letter { font-family: 'Changa'; font-size: 6rem; color: var(--primary); text-shadow: 0 4px 10px rgba(0,0,0,0.5); line-height: 1; height: 120px; display: flex; align-items: center; justify-content: center; }
+        .roulette-box { background: var(--bg-card); padding: 30px; border-radius: 30px; border: 4px solid var(--accent); text-align: center; box-shadow: 0 0 50px rgba(245, 158, 11, 0.3); width: 90%; max-width: 400px; transform: scale(0.8); animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes popIn { to { transform: scale(1); } }
+        .r-letter { font-family: 'Changa'; font-size: 6rem; color: var(--primary); text-shadow: 0 4px 10px rgba(0,0,0,0.5); line-height: 1; height: 120px; display: flex; align-items: center; justify-content: center; transition: 0.1s; }
 
         #toast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: var(--bg-card); color: white; padding: 14px 28px; border-radius: 100px; font-weight: 700; border: 2px solid var(--primary); box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 9999; transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; gap: 10px; width: 90%; max-width: 400px; justify-content: center;}
-        #toast.show { top: 20px; }
-
-        .leaderboard-row { display: flex; align-items: center; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 10px; position: relative; overflow: hidden; }
-        .lb-rank { font-size: 1.5rem; font-weight: 900; color: var(--accent); width: 40px; }
-        .lb-info { flex: 1; display: flex; align-items: center; gap: 15px; font-size: 1.2rem; font-weight: 700; }
-        .lb-score { font-family: monospace; font-size: 1.8rem; font-weight: 900; color: var(--success); }
-        .gold-border { border: 2px solid #fbbf24; background: rgba(251, 191, 36, 0.1); }
+        #toast.show { top: env(safe-area-inset-top, 20px); margin-top: 20px; }
 
         #screen-flash { position: fixed; inset: 0; pointer-events: none; z-index: 90; box-shadow: inset 0 0 0 0 rgba(239, 68, 68, 0); transition: 0.2s; }
         .flash-danger { box-shadow: inset 0 0 100px 20px rgba(239, 68, 68, 0.6) !important; }
         .host-control-banner { background: rgba(245, 158, 11, 0.15); border: 1px dashed var(--accent); padding: 10px; border-radius: 12px; margin-bottom: 15px; text-align: center; color: var(--accent); font-size: 0.9rem; font-weight: 700; }
 
         @media (max-width: 500px) {
-            .card { padding: 15px; }
+            .card { padding: 18px 15px; }
             .game-header { padding: 10px 15px; }
             .timer-display { width: 50px; height: 50px; }
             .val-letter { font-size: 2.2rem; }
-            .btn-stop-game { padding: 12px; font-size: 1.4rem; }
-            .a-player span.name { display: none; } /* إخفاء الاسم في المراجعة للاكتفاء بالصورة للشاشات الصغيرة */
+            .btn-stop-game { padding: 14px; font-size: 1.4rem; }
+            .a-player span.name { display: none; } /* إخفاء الاسم في الموبايل لضيق المساحة */
         }
     </style>
 </head>
@@ -219,7 +216,7 @@
         <div class="container" style="justify-content: center; min-height: 90vh;">
             <div class="logo-wrap">
                 <h1 class="title-font logo-title">إنسان<br>حيوان</h1>
-                <p style="color: var(--text-muted); font-size: 1.1rem; margin-top: 10px;">لعبة السرعة والكلمات لـ 2 إلى 8 لاعبين!</p>
+                <p style="color: var(--text-muted); font-size: 1.1rem; margin-top: 10px;">لعبة السرعة والكلمات</p>
             </div>
             
             <div class="card">
@@ -227,27 +224,26 @@
                 <div class="avatars-grid" id="avatar-container"></div>
                 
                 <h3 style="margin-bottom: 10px; color: white; margin-top: 15px;">2. ما اسمك؟</h3>
-                <input type="text" id="inp-name" placeholder="أدخل اسمك هنا..." maxlength="12">
+                <input type="text" id="inp-name" placeholder="أدخل اسمك هنا..." maxlength="12" enterkeyhint="done">
                 
                 <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 25px;">
                     <button class="btn-primary" id="btn-create" style="width: 100%;">إنشاء غرفة (أنت القائد) 👑</button>
-                    <div class="divider">أو انضم لغرفة صديق</div>
+                    <div style="display: flex; align-items: center; color: var(--text-muted); font-size: 0.9rem; margin: 5px 0;">
+                        <span style="flex:1; height:1px; background:#334155;"></span><span style="margin:0 15px;">أو</span><span style="flex:1; height:1px; background:#334155;"></span>
+                    </div>
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="inp-room" placeholder="رمز الغرفة (6 أرقام)" maxlength="6" style="letter-spacing: 5px; text-align: center; flex: 1;">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="inp-room" placeholder="رمز الغرفة" maxlength="6" style="letter-spacing: 5px; text-align: center; flex: 1;" enterkeyhint="go">
                         <button class="btn-secondary" id="btn-join">دخول 🚀</button>
                     </div>
                 </div>
-                
-                <div id="net-status" style="margin-top: 15px; font-size: 0.85rem; color: var(--danger); text-align: center; font-weight: 700;"></div>
             </div>
-            <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">الإصدار الكامل | مثالية للعب مع العائلة والأصدقاء</div>
         </div>
     </div>
 
     <!-- 2. خيمة الانتظار -->
     <div id="screen-lobby" class="screen">
         <div class="container">
-            <h1 class="title-font" style="text-align: center; color: white; font-size: 2.2rem; margin-top: 20px;">غرفة الانتظار</h1>
+            <h1 class="title-font" style="text-align: center; color: white; font-size: 2.2rem; margin-top: 10px;">غرفة الانتظار</h1>
             
             <div class="card">
                 <div id="host-zone" style="display: none;">
@@ -262,7 +258,7 @@
                 </div>
 
                 <h3 style="margin-bottom: 15px; color: white; font-size: 1.1rem; border-bottom: 1px solid #334155; padding-bottom: 10px;">اللاعبون الحاليون (<span id="lbl-p-count">1</span>/8):</h3>
-                <div id="lobby-players" style="min-height: 100px; display: flex; flex-direction: column; gap: 5px;"></div>
+                <div id="lobby-players" style="min-height: 100px; display: flex; flex-direction: column; gap: 8px;"></div>
 
                 <button class="btn-primary" id="btn-start-game" style="width: 100%; margin-top: 15px; display: none;">ابدأ الجولة! 🎮</button>
             </div>
@@ -277,7 +273,7 @@
                     <span class="timer-val" id="ui-timer">60</span>
                 </div>
                 <div class="letter-display">
-                    <span class="lbl-letter">حرف الجولة</span>
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">حرف الجولة</span>
                     <span class="val-letter" id="ui-letter">؟</span>
                 </div>
                 <div style="text-align: left; line-height: 1.2;">
@@ -286,44 +282,44 @@
                 </div>
             </div>
 
-            <div class="card play-area">
+            <div class="card play-area" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
                 <div class="input-group">
                     <label>👤 إنسان</label>
-                    <input type="text" id="inp-cat-1" class="ans-input" data-cat="1" placeholder="أدخل اسم ولد أو بنت...">
+                    <input type="text" id="inp-cat-1" class="ans-input" data-cat="1" placeholder="اسم ولد أو بنت..." enterkeyhint="next">
                 </div>
                 <div class="input-group">
                     <label>🦁 حيوان</label>
-                    <input type="text" id="inp-cat-2" class="ans-input" data-cat="2" placeholder="أدخل حيوان...">
+                    <input type="text" id="inp-cat-2" class="ans-input" data-cat="2" placeholder="حيوان..." enterkeyhint="next">
                 </div>
                 <div class="input-group">
                     <label>🌳 نبات</label>
-                    <input type="text" id="inp-cat-3" class="ans-input" data-cat="3" placeholder="خضار، فواكه، أشجار...">
+                    <input type="text" id="inp-cat-3" class="ans-input" data-cat="3" placeholder="خضار، فواكه، أشجار..." enterkeyhint="next">
                 </div>
                 <div class="input-group">
                     <label>🪑 جماد</label>
-                    <input type="text" id="inp-cat-4" class="ans-input" data-cat="4" placeholder="شيء لا يتحرك...">
+                    <input type="text" id="inp-cat-4" class="ans-input" data-cat="4" placeholder="شيء لا يتحرك..." enterkeyhint="next">
                 </div>
                 <div class="input-group">
                     <label>🌍 بلاد</label>
-                    <input type="text" id="inp-cat-5" class="ans-input" data-cat="5" placeholder="دولة أو مدينة...">
+                    <input type="text" id="inp-cat-5" class="ans-input" data-cat="5" placeholder="دولة أو مدينة..." enterkeyhint="done">
                 </div>
 
                 <button class="btn-stop-game" id="btn-stop">أتوبيس كومبليت! 🛑</button>
-                <p id="stop-msg" style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-top: 10px; display: none;">أحد اللاعبين أوقف اللعبة! أسرع!</p>
+                <p id="stop-msg" style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-top: 5px; display: none;"></p>
             </div>
         </div>
     </div>
 
-    <!-- 4. واجهة التصويت -->
+    <!-- 4. واجهة التقييم -->
     <div id="screen-review" class="screen">
         <div class="container">
-            <h1 class="title-font" style="text-align: center; color: white; font-size: 2rem; margin-top: 10px;">النتائج والنقاط</h1>
+            <h1 class="title-font" style="text-align: center; color: white; font-size: 2rem; margin-top: 10px;">المراجعة والنقاط</h1>
             
             <div id="host-review-banner" class="host-control-banner" style="display: none;">
-                أنت القائد 👑: يمكنك تعديل قرارات النظام (رفض أو قبول) لأي كلمة.
+                أنت القائد 👑: اضغط على الرقم لتعديل النقاط (10 ➔ 5 ➔ 0)
             </div>
             <div id="client-review-banner" class="host-control-banner" style="display: none; border-color: var(--text-muted); color: var(--text-muted); background: transparent;">
-                القائد يقوم بمراجعة الإجابات. (إجابة فريدة = 10، مكررة = 5).
+                القائد يقوم بمراجعة الإجابات وتوزيع النقاط...
             </div>
 
             <div class="card" id="review-container" style="padding: 15px;"></div>
@@ -337,17 +333,17 @@
     <div id="screen-end" class="screen">
         <div class="container">
             <h1 class="title-font" style="text-align: center; color: var(--accent); font-size: 3rem; margin-top: 20px;">النهاية!</h1>
-            <p style="text-align: center; color: white; font-size: 1.2rem; margin-bottom: 20px;">من هو ملك الكلمات؟</p>
+            <p style="text-align: center; color: white; font-size: 1.2rem; margin-bottom: 20px;">الترتيب النهائي</p>
 
             <div class="card" id="leaderboard-container"></div>
 
-            <button class="btn-outline" id="btn-return-home" style="width: 100%; margin-top: 20px; display: none;">العودة للرئيسية 🏠</button>
+            <button class="btn-outline" id="btn-return-home" style="width: 100%; margin-top: 20px;">العودة للرئيسية 🏠</button>
         </div>
     </div>
 
     <div id="roulette-overlay" class="overlay">
         <div class="roulette-box">
-            <div class="r-title">يتم اختيار الحرف...</div>
+            <div style="font-size: 1.2rem; color: var(--text-muted); margin-bottom: 10px; font-weight: 700;">يتم اختيار الحرف...</div>
             <div class="r-letter" id="roulette-letter">؟</div>
         </div>
     </div>
@@ -358,7 +354,6 @@
     
     <script>
         const MAX_PLAYERS = 8;
-        // تمت إضافة خيار "بدون" لمن لا يرغب بإيموجي
         const AVATARS =['بدون', '🦊', '🐱', '🐼', '🐯', '🐰', '🐸', '🦄', '🐶', '🐔', '🦁', '🦉', '🐙', '🦖', '🐬', '🐧', '👻'];
         const ARABIC_LETTERS =['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي'];
         const CATEGORIES = {
@@ -383,17 +378,15 @@
             },
             normalizeForMatch: (text) => {
                 if (!text) return '';
+                // توحيد الحروف للبحث (أ إ آ ا -> ا) (ة -> ه) (ى -> ي)
                 return text.trim()
-                           .replace(/[أإآا]/g, 'ا')
+                           .replace(/[أإآ]/g, 'ا')
                            .replace(/ة/g, 'ه')
                            .replace(/ى/g, 'ي')
                            .replace(/\s+/g, '');
             },
-            checkMatch: (word, targetLetter) => {
-                const w = Utils.normalizeForMatch(word);
-                if (w.length === 0) return false;
-                const normLetter = Utils.normalizeForMatch(targetLetter);
-                return w.charAt(0) === normLetter;
+            vibrate: (pattern) => {
+                if(navigator.vibrate) navigator.vibrate(pattern);
             }
         };
 
@@ -425,7 +418,7 @@
             peer: null, hostConn: null, clientConns: {},
             phase: 'LOBBY', round: 1, maxRounds: 5, players: {},
             currentLetter: '', answersGathered: 0, scoredData: {},
-            timerInt: null, timeLeft: 60, emergencyMode: false
+            timerInt: null, timeLeft: 60, emergencyMode: false, fallbackTimeout: null
         };
 
         const Logic = {
@@ -433,13 +426,9 @@
                 const avaBox = document.getElementById('avatar-container');
                 AVATARS.forEach((a, i) => {
                     let btn = document.createElement('div');
-                    btn.className = 'avatar-btn' + (i === 1 ? ' selected' : ''); // تحديد الثعلب افتراضياً
-                    if (a === 'بدون') {
-                        btn.classList.add('no-emoji');
-                        btn.textContent = 'بدون';
-                    } else {
-                        btn.textContent = a;
-                    }
+                    btn.className = 'avatar-btn' + (i === 1 ? ' selected' : '');
+                    if (a === 'بدون') { btn.classList.add('no-emoji'); btn.textContent = 'بدون'; } 
+                    else { btn.textContent = a; }
                     
                     btn.onclick = () => {
                         document.querySelectorAll('.avatar-btn').forEach(x=>x.classList.remove('selected'));
@@ -448,21 +437,33 @@
                     };
                     avaBox.appendChild(btn);
                 });
-                AppState.myAva = AVATARS[1]; // الثعلب
+                AppState.myAva = AVATARS[1];
 
+                // تهيئة الصوت عند أول نقرة
                 document.body.addEventListener('click', AudioSys.init, {once: true});
                 document.body.addEventListener('touchstart', AudioSys.init, {once: true});
 
                 document.getElementById('btn-create').onclick = Logic.hostCreateRoom;
                 document.getElementById('btn-join').onclick = Logic.clientJoinRoom;
-                document.getElementById('btn-copy-code').onclick = () => { navigator.clipboard.writeText(AppState.roomCode); Utils.showToast('تم نسخ الرمز!', 'ok'); };
+                document.getElementById('btn-copy-code').onclick = () => { navigator.clipboard.writeText(AppState.roomCode); Utils.showToast('تم نسخ الرمز!', 'ok'); Utils.vibrate(50); };
                 
                 document.getElementById('btn-start-game').onclick = () => { if(AppState.isHost) Logic.hostStartNextRound(); };
                 document.getElementById('btn-stop').onclick = Logic.pressStop;
                 document.getElementById('btn-next-round').onclick = () => { if(AppState.isHost) Logic.hostConfirmReview(); };
                 document.getElementById('btn-return-home').onclick = () => location.reload();
 
-                document.querySelectorAll('.ans-input').forEach(inp => { inp.addEventListener('input', Logic.checkAllInputsFilled); });
+                // الانتقال بين الحقول برمجياً للهواتف
+                const inputs = Array.from(document.querySelectorAll('.ans-input'));
+                inputs.forEach((inp, idx) => {
+                    inp.addEventListener('input', Logic.checkAllInputsFilled);
+                    inp.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (idx < inputs.length - 1) inputs[idx + 1].focus();
+                            else inputs[idx].blur();
+                        }
+                    });
+                });
             },
 
             switchScreen: (id) => {
@@ -482,12 +483,7 @@
                     if(AppState.isHost && id === AppState.myId) badge = '<span class="p-badge">أنت القائد 👑</span>';
                     else if (!AppState.isHost && id === 'ato-'+AppState.roomCode) badge = '<span class="p-badge">القائد 👑</span>';
                     
-                    let kickBtn = '';
-                    if (AppState.isHost && id !== AppState.myId) {
-                        kickBtn = `<button class="btn-danger" style="padding: 6px 12px; font-size: 0.8rem;" onclick="Logic.hostKickPlayer('${id}')">طرد 👢</button>`;
-                    }
-
-                    // إخفاء الـ span بالكامل إذا اختار اللاعب "بدون إيموجي"
+                    let kickBtn = (AppState.isHost && id !== AppState.myId) ? `<button class="btn-danger" style="padding: 6px 12px; font-size: 0.8rem;" onclick="Logic.hostKickPlayer('${id}')">طرد 👢</button>` : '';
                     let avaHtml = p.ava ? `<span class="p-ava">${p.ava}</span>` : '';
 
                     let row = document.createElement('div'); row.className = 'player-row';
@@ -504,7 +500,7 @@
                 let btn = document.getElementById('btn-create');
                 btn.disabled = true; btn.textContent = 'جاري الإنشاء...';
                 
-                AppState.roomCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6 أرقام
+                AppState.roomCode = Math.floor(100000 + Math.random() * 900000).toString();
                 const peerId = 'ato-' + AppState.roomCode;
                 
                 try {
@@ -524,17 +520,17 @@
                         conn.on('data', (data) => Logic.hostHandleData(conn.peer, data, conn));
                         conn.on('close', () => Logic.hostHandleDisconnect(conn.peer));
                     });
-                    AppState.peer.on('error', (err) => {
-                        document.getElementById('net-status').textContent = 'حدث خطأ في الخادم، حاول مجدداً.';
-                        btn.disabled = false; btn.textContent = 'إنشاء غرفة جديدة 👑';
+                    AppState.peer.on('error', () => {
+                        Utils.showToast('حدث خطأ في الخادم، حاول مجدداً.', 'err');
+                        btn.disabled = false; btn.textContent = 'إنشاء غرفة (أنت القائد) 👑';
                     });
                 } catch (err) { btn.disabled = false; }
             },
 
             hostHandleData: (peerId, data, conn) => {
                 if (data.type === 'JOIN') {
-                    if (Object.keys(AppState.players).length >= MAX_PLAYERS) return conn.send({type: 'ERROR', msg: `الغرفة ممتلئة (الحد الأقصى ${MAX_PLAYERS})`});
-                    if (AppState.phase !== 'LOBBY') return conn.send({type: 'ERROR', msg: 'عذراً، اللعبة بدأت بالفعل!'});
+                    if (Object.keys(AppState.players).length >= MAX_PLAYERS) return conn.send({type: 'ERROR', msg: `الغرفة ممتلئة`});
+                    if (AppState.phase !== 'LOBBY') return conn.send({type: 'ERROR', msg: 'اللعبة بدأت بالفعل!'});
                     
                     AppState.clientConns[peerId] = conn;
                     AppState.players[peerId] = { name: data.name, ava: data.ava, score: 0, answers: {}, isConnected: true };
@@ -544,7 +540,6 @@
                 else if (data.type === 'EMERGENCY_STOP' && AppState.phase === 'PLAYING' && !AppState.emergencyMode) {
                     Logic.triggerEmergency(peerId);
                 }
-                // BUG FIX: Allow 'SUBMITTING' phase so late submissions don't freeze the game
                 else if (data.type === 'SUBMIT_ANSWERS' && (AppState.phase === 'PLAYING' || AppState.phase === 'SUBMITTING')) {
                     if(AppState.players[peerId]) {
                         AppState.players[peerId].answers = data.answers;
@@ -555,7 +550,7 @@
             },
 
             hostKickPlayer: (pId) => {
-                if (AppState.clientConns[pId]) { AppState.clientConns[pId].send({ type: 'ERROR', msg: 'تم طردك من الغرفة!' }); AppState.clientConns[pId].close(); }
+                if (AppState.clientConns[pId]) { AppState.clientConns[pId].send({ type: 'ERROR', msg: 'تم طردك!' }); AppState.clientConns[pId].close(); }
                 delete AppState.players[pId]; delete AppState.clientConns[pId];
                 Logic.hostBroadcast({ type: 'SYNC_LOBBY', players: AppState.players }); Logic.updateLobbyUI();
             },
@@ -572,7 +567,6 @@
             hostBroadcast: (msg) => { Object.values(AppState.clientConns).forEach(conn => { if(conn.open) conn.send(msg); }); },
 
             hostStartNextRound: () => {
-                // إزالة قيود اللاعبين للسماح للقائد بالتجربة وحده إن رغب
                 if (AppState.round > AppState.maxRounds) return Logic.hostEndGame();
 
                 AppState.phase = 'PLAYING'; AppState.emergencyMode = false; AppState.answersGathered = 0;
@@ -600,8 +594,8 @@
 
             hostCheckAllAnswersReceived: () => {
                 const activeCount = Object.keys(AppState.players).length;
-                // BUG FIX: Must accept 'SUBMITTING' phase since the host updates its own phase before calling this
                 if (AppState.answersGathered >= activeCount && (AppState.phase === 'PLAYING' || AppState.phase === 'SUBMITTING')) {
+                    clearTimeout(AppState.fallbackTimeout);
                     clearInterval(AppState.timerInt);
                     Logic.hostEvaluateAndReview();
                 }
@@ -614,42 +608,40 @@
                     Object.keys(AppState.players).forEach(pId => {
                         let word = AppState.players[pId].answers[catId] || '';
                         let norm = Utils.normalizeForMatch(word);
-                        catAnswers.push({ pId: pId, rawWord: word, normWord: norm, pts: 0, isRejected: false });
+                        catAnswers.push({ pId: pId, rawWord: word, normWord: norm, pts: 0, isManual: false });
                     });
 
-                    // التقييم المبدئي
-                    catAnswers.forEach(ans => {
-                        if (ans.normWord === '' || !Utils.checkMatch(ans.normWord, AppState.currentLetter)) {
-                            ans.isRejected = true;
+                    // التقييم المبدئي التلقائي
+                    let validNorms = catAnswers.filter(a => a.normWord !== '' && Utils.normalizeForMatch(a.normWord).charAt(0) === Utils.normalizeForMatch(AppState.currentLetter)).map(a => a.normWord);
+                    
+                    catAnswers.forEach(a => {
+                        if (a.normWord === '' || Utils.normalizeForMatch(a.normWord).charAt(0) !== Utils.normalizeForMatch(AppState.currentLetter)) {
+                            a.pts = 0;
+                        } else {
+                            let count = validNorms.filter(n => n === a.normWord).length;
+                            a.pts = (count > 1) ? 5 : 10;
                         }
                     });
 
-                    Logic.calculatePoints(catAnswers);
                     AppState.scoredData[catId] = catAnswers;
                 });
                 Logic.hostSyncReviewState();
             },
 
-            calculatePoints: (ansArray) => {
-                let validNorms = ansArray.filter(a => !a.isRejected).map(a => a.normWord);
-                ansArray.forEach(a => {
-                    if (a.isRejected) { a.pts = 0; } 
-                    else {
-                        let count = validNorms.filter(n => n === a.normWord).length;
-                        a.pts = (count > 1) ? 5 : 10;
-                    }
-                });
-            },
-
-            hostToggleAnswer: (catId, pId) => {
+            // النظام الجديد: التبديل بين 10, 5, 0
+            hostCycleScore: (catId, pId) => {
                 if (!AppState.isHost || AppState.phase !== 'REVIEW') return;
                 let ansArray = AppState.scoredData[catId];
                 let item = ansArray.find(a => a.pId === pId);
-                if (item) {
-                    item.isRejected = !item.isRejected; // عكس الحالة
-                    Logic.calculatePoints(ansArray);
+                if (item && item.rawWord !== '') {
+                    item.isManual = true; // علامة أن القائد تدخل يدوياً
+                    if (item.pts === 10) item.pts = 5;
+                    else if (item.pts === 5) item.pts = 0;
+                    else item.pts = 10;
+                    
                     Logic.hostSyncReviewState();
-                    if (item.isRejected) AudioSys.fail(); else AudioSys.success();
+                    if (item.pts === 0) AudioSys.fail(); else AudioSys.success();
+                    Utils.vibrate(20);
                 }
             },
 
@@ -703,9 +695,9 @@
                         });
                         AppState.hostConn.on('data', Logic.clientHandleData);
                         AppState.hostConn.on('close', () => { Utils.showToast('فقدت الاتصال بقائد الغرفة!', 'err'); setTimeout(() => location.reload(), 2000); });
-                        AppState.hostConn.on('error', () => { Utils.showToast('خطأ في الاتصال!', 'err'); location.reload(); });
+                        AppState.hostConn.on('error', () => { Utils.showToast('خطأ في الاتصال!', 'err'); btn.disabled = false; btn.textContent = 'دخول 🚀'; });
                     });
-                } catch(err) { btn.disabled=false; }
+                } catch(err) { btn.disabled=false; btn.textContent = 'دخول 🚀'; }
             },
 
             clientHandleData: (data) => {
@@ -725,18 +717,25 @@
                 overlay.classList.add('active');
                 
                 let counter = 0;
-                let interval = setInterval(() => {
+                let speed = 50;
+                
+                function spin() {
                     letterBox.textContent = ARABIC_LETTERS[Utils.rand(0, ARABIC_LETTERS.length-1)];
-                    AudioSys.tick(); counter++;
-                    if (counter > 25) {
-                        clearInterval(interval);
+                    AudioSys.tick();
+                    counter++;
+                    speed += 10; // تأثير الإبطاء التدريجي (Ease-out)
+                    
+                    if (counter < 20) {
+                        setTimeout(spin, speed);
+                    } else {
                         letterBox.textContent = letter; AppState.currentLetter = letter;
                         AudioSys.success();
-                        letterBox.style.transform = 'scale(1.5)';
+                        letterBox.style.transform = 'scale(1.3)';
                         setTimeout(() => letterBox.style.transform = 'scale(1)', 300);
+                        setTimeout(() => overlay.classList.remove('active'), 1500);
                     }
-                }, 100);
-                setTimeout(() => overlay.classList.remove('active'), 3500);
+                }
+                spin();
             },
 
             clientStartPlayPhase: () => {
@@ -746,7 +745,9 @@
                 document.getElementById('stop-msg').style.display = 'none';
                 
                 document.querySelectorAll('.ans-input').forEach(inp => { inp.value = ''; inp.disabled = false; });
-                
+                // Focus first input automatically on non-mobile (on mobile it might pop keyboard annoyingly)
+                if(window.innerWidth > 600) document.getElementById('inp-cat-1').focus();
+
                 let btnStop = document.getElementById('btn-stop');
                 btnStop.disabled = true; btnStop.classList.remove('ready'); btnStop.innerHTML = 'أتوبيس كومبليت! 🛑';
                 
@@ -759,9 +760,12 @@
             checkAllInputsFilled: () => {
                 if(AppState.phase !== 'PLAYING' || AppState.emergencyMode) return;
                 let allFilled = true;
-                document.querySelectorAll('.ans-input').forEach(inp => { if (inp.value.trim().length < 2) allFilled = false; });
+                document.querySelectorAll('.ans-input').forEach(inp => { if (inp.value.trim().length < 1) allFilled = false; });
                 let btnStop = document.getElementById('btn-stop');
-                if (allFilled) { btnStop.disabled = false; btnStop.classList.add('ready'); } 
+                if (allFilled) { 
+                    if(!btnStop.classList.contains('ready')) Utils.vibrate(50); // اهتزاز خفيف عند اكتمال الحقول
+                    btnStop.disabled = false; btnStop.classList.add('ready'); 
+                } 
                 else { btnStop.disabled = true; btnStop.classList.remove('ready'); }
             },
 
@@ -769,7 +773,7 @@
                 if(AppState.phase !== 'PLAYING' || AppState.emergencyMode) return;
                 let btn = document.getElementById('btn-stop');
                 btn.disabled = true; btn.innerHTML = 'تم الإرسال ✓'; btn.classList.remove('ready');
-                document.querySelectorAll('.ans-input').forEach(inp => inp.disabled = true);
+                document.querySelectorAll('.ans-input').forEach(inp => inp.blur()); // إخفاء الكيبورد
                 
                 if (AppState.isHost) Logic.triggerEmergency(AppState.myId);
                 else AppState.hostConn.send({ type: 'EMERGENCY_STOP' });
@@ -781,9 +785,10 @@
                 btn.disabled = true; btn.classList.remove('ready');
                 
                 let msg = document.getElementById('stop-msg');
-                msg.style.display = 'block'; msg.textContent = `🚨 ${triggerName} أوقف اللعبة! أسرع!`;
+                msg.style.display = 'block'; msg.innerHTML = `🚨 <strong>${triggerName}</strong> أوقف اللعبة! أسرع!`;
                 
                 AudioSys.siren();
+                Utils.vibrate([200, 100, 200]);
                 document.getElementById('ui-timer-box').classList.add('emergency');
                 document.getElementById('screen-flash').classList.add('flash-danger');
                 Logic.startTimer(timeToSet);
@@ -809,15 +814,20 @@
                 AppState.phase = 'SUBMITTING'; 
                 document.getElementById('ui-timer-box').classList.remove('emergency');
                 document.getElementById('screen-flash').classList.remove('flash-danger');
-                AudioSys.siren();
+                AudioSys.siren(); Utils.vibrate(500);
                 
                 let myAns = {};
                 document.querySelectorAll('.ans-input').forEach(inp => {
                     inp.disabled = true; myAns[inp.getAttribute('data-cat')] = inp.value.trim();
                 });
 
-                // BUG FIX: Host calls checkAllAnswersReceived right away
-                if (AppState.isHost) { AppState.players[AppState.myId].answers = myAns; AppState.answersGathered++; Logic.hostCheckAllAnswersReceived(); } 
+                if (AppState.isHost) { 
+                    AppState.players[AppState.myId].answers = myAns; 
+                    AppState.answersGathered++; 
+                    Logic.hostCheckAllAnswersReceived(); 
+                    // نظام حماية للقائد لعدم التعليق إذا لم يرسل أحدهم
+                    AppState.fallbackTimeout = setTimeout(() => { Logic.hostEvaluateAndReview(); }, 5000);
+                } 
                 else { AppState.hostConn.send({ type: 'SUBMIT_ANSWERS', answers: myAns }); }
                 Utils.showToast('انتهى الوقت! جاري جمع الورق...', 'info');
             },
@@ -838,16 +848,21 @@
                     
                     answersArray.forEach(ans => {
                         let p = AppState.players[ans.pId]; let w = ans.rawWord || '---';
-                        let row = document.createElement('div');
-                        row.className = 'answer-row' + (ans.isRejected ? ' rejected' : '');
                         
-                        let ptsClass = ans.pts === 10 ? 'pts-10' : (ans.pts === 5 ? 'pts-5' : 'pts-0');
-                        let rejectBtnHtml = '';
+                        let rowClass = 'answer-row';
+                        if (ans.pts === 0) rowClass += ' rejected';
+                        else if (ans.pts === 5) rowClass += ' warned';
+                        
+                        let row = document.createElement('div'); row.className = rowClass;
+                        
+                        // زر التبديل للقائد
+                        let scoreDisplay = '';
                         if (AppState.isHost && w !== '---') {
-                            if (!ans.isRejected) rejectBtnHtml = `<button class="btn-danger" style="padding: 6px 12px; font-size: 0.85rem;" onclick="Logic.hostToggleAnswer('${catId}','${ans.pId}')">❌ رفض</button>`;
-                            else rejectBtnHtml = `<button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem; background: var(--success);" onclick="Logic.hostToggleAnswer('${catId}','${ans.pId}')">✅ قبول</button>`;
-                        } else if (ans.isRejected) {
-                            rejectBtnHtml = `<span style="font-size:0.85rem; color:var(--danger); font-weight:bold;">مرفوض</span>`;
+                            let btnClass = `btn-cycle-score s-${ans.pts}`;
+                            scoreDisplay = `<button class="${btnClass}" onclick="Logic.hostCycleScore('${catId}','${ans.pId}')">${ans.pts}</button>`;
+                        } else {
+                            let ptsClass = ans.pts === 10 ? 'pts-10' : (ans.pts === 5 ? 'pts-5' : 'pts-0');
+                            scoreDisplay = `<span class="a-pts ${ptsClass}">+${ans.pts}</span>`;
                         }
 
                         let avaHtml = p.ava ? `<span style="font-size:1.5rem">${p.ava}</span>` : '';
@@ -855,10 +870,7 @@
                         row.innerHTML = `
                             <div class="a-player">${avaHtml} <span class="name">${p.name}</span></div>
                             <div class="a-word">${w}</div>
-                            <div class="a-score">
-                                ${rejectBtnHtml}
-                                <span class="a-pts ${ptsClass}">+${ans.pts}</span>
-                            </div>
+                            <div class="a-score">${scoreDisplay}</div>
                         `;
                         sec.appendChild(row);
                     });
@@ -869,22 +881,24 @@
             clientShowEnd: (finalPlayersData) => {
                 Logic.switchScreen('screen-end');
                 const lb = document.getElementById('leaderboard-container'); lb.innerHTML = '';
-                document.getElementById('btn-return-home').style.display = 'block';
-
+                
                 let sorted = Object.values(finalPlayersData).sort((a,b) => b.score - a.score);
                 sorted.forEach((p, i) => {
                     let medal = i===0 ? '🥇' : (i===1 ? '🥈' : (i===2 ? '🥉' : ''));
-                    let row = document.createElement('div'); row.className = 'leaderboard-row' + (i===0 ? ' gold-border' : '');
+                    let row = document.createElement('div'); 
+                    row.className = 'player-row' + (i===0 ? ' gold-border' : '');
+                    if(i===0) row.style.border = '2px solid #fbbf24';
+                    
                     let avaHtml = p.ava ? `<span style="font-size:1.8rem">${p.ava}</span>` : '';
                     
                     row.innerHTML = `
-                        <div class="lb-rank">${medal || '#'+(i+1)}</div>
-                        <div class="lb-info">${avaHtml} ${p.name}</div>
-                        <div class="lb-score">${p.score} <span style="font-size:0.8rem;color:var(--text-muted);font-family:'Cairo';">نقطة</span></div>
+                        <div style="font-size: 1.5rem; font-weight: 900; width: 40px; text-align:center;">${medal || '#'+(i+1)}</div>
+                        <div class="p-info">${avaHtml} <span class="p-name">${p.name}</span></div>
+                        <div style="font-family: monospace; font-size: 1.8rem; font-weight: 900; color: var(--success);">${p.score}</div>
                     `;
                     lb.appendChild(row);
                 });
-                AudioSys.success(); setTimeout(()=>AudioSys.success(), 400); Logic.createConfetti();
+                AudioSys.success(); setTimeout(()=>AudioSys.success(), 400); Logic.createConfetti(); Utils.vibrate([300,100,300,100,500]);
             },
 
             createConfetti: () => {
