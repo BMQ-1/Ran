@@ -1231,8 +1231,8 @@ function createRoom(){
 const _rateTs={};
 function hostOnData(pid,data,conn){
   if(!data||typeof data!=='object'||!data.type) return;
-  // Rate limit: max 1 message per 60ms per peer (except VOTE which needs to be immediate)
-  if(data.type!=='VOTE'){
+  // Rate limit: max 1 message per 60ms per peer (except critical events that need to be immediate)
+  if(!['VOTE', 'SUBMIT', 'STOP_REQ'].includes(data.type)){
     const now=Date.now();
     if(_rateTs[pid]&&now-_rateTs[pid]<60) return;
     _rateTs[pid]=now;
@@ -1286,7 +1286,6 @@ function hostOnDisconn(pid){
   if(!S.players[pid]) return;
   toast(S.players[pid].name+' غادر','err');
   
-  // Bug Fix: Only decrement answersIn if they actually submitted
   if (S.players[pid].hasSubmitted) S.answersIn--;
   delete S.players[pid]; delete S.clientConns[pid]; delete _rateTs[pid];
   
@@ -1790,7 +1789,8 @@ function onTimeUp(){
       S.players[S.myId].hasSubmitted=true;
       S.answersIn++;
     }
-    S.fallbackTimer=setTimeout(()=>{ if(S.phase==='SUBMITTING') hostDoReview(); },5500);
+    // Reduced fallback timer to 3.5s to prevent feeling frozen when a client drops
+    S.fallbackTimer=setTimeout(()=>{ if(S.phase==='SUBMITTING') hostDoReview(); },3500);
     hostCheckAll();
   } else {
     try{ S.hostConn.send({type:'SUBMIT',answers:ans}); }catch(e){}
@@ -1839,9 +1839,11 @@ function clientOnEmerg(name,time,targetEndTimeMs){
 ═══════════════════════════════ */
 function renderReview(data, isUpdate=false){
   const body=document.getElementById('review-body');
+  const isScreenActive = document.getElementById('s-review').classList.contains('active');
 
   // In-place update to prevent scroll jumping when host clicks a score
-  if(isUpdate && S.phase==='REVIEW' && body.innerHTML !== ''){
+  // Added isScreenActive check to prevent the host from freezing on screen changes!
+  if(isUpdate && S.phase==='REVIEW' && body.innerHTML !== '' && isScreenActive){
     Object.keys(CATS).forEach(catId=>{
       (data[catId]||[]).forEach(e=>{
         const el = document.getElementById(`score-${catId}-${e.pid}`);
