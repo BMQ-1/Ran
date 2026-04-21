@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#4f46e5">
-    <title>أتوبيس كومبليت - لعبة الحروف والكلمات</title>
-    <!-- خطوط عربية جميلة ومقروءة من Google Fonts -->
+    <title>إنسان حيوان - لعبة السرعة والكلمات</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Changa:wght@600;800&display=swap" rel="stylesheet">
     
@@ -41,7 +40,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* خلفية مزينة بأشكال متحركة ناعمة */
         body::before {
             content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: radial-gradient(circle at 15% 50%, rgba(79, 70, 229, 0.15), transparent 25%),
@@ -78,7 +76,7 @@
         input[type="text"], input[type="number"] {
             background: var(--bg-input); border: 2px solid transparent; color: var(--text-light);
             padding: 14px 18px; border-radius: 12px; font-family: 'Cairo', sans-serif;
-            font-size: 1.1rem; font-weight: 700; outline: none; transition: var(--transition);
+            font-size: 16px; font-weight: 700; outline: none; transition: var(--transition);
             width: 100%; text-align: right; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
             user-select: auto;
         }
@@ -107,11 +105,12 @@
            4. واجهة الدخول
            ========================================================================= */
         .logo-wrap { text-align: center; margin-bottom: 10px; margin-top: 5vh;}
-        .logo-title { font-size: 3.5rem; background: linear-gradient(to left, #60a5fa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 4px 20px rgba(192, 132, 252, 0.3); line-height: 1.2; }
+        .logo-title { font-size: 4rem; background: linear-gradient(to left, #60a5fa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 4px 20px rgba(192, 132, 252, 0.3); line-height: 1.2; }
         
         .avatars-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 15px 0; }
         .avatar-btn { width: 55px; height: 55px; font-size: 1.8rem; border-radius: 50%; background: var(--bg-input); display: flex; align-items: center; justify-content: center; border: 3px solid transparent; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .avatar-btn.selected { border-color: var(--accent); background: rgba(245, 158, 11, 0.2); transform: scale(1.15); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); }
+        .avatar-btn.no-emoji { font-size: 1rem; font-weight: 800; color: var(--text-muted); }
 
         .divider { display: flex; align-items: center; text-align: center; color: var(--text-muted); font-size: 0.9rem; margin: 10px 0; }
         .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #334155; margin: 0 15px; }
@@ -170,7 +169,7 @@
         .answer-row.rejected { opacity: 0.7; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.4); }
         
         .a-player { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
-        .a-player span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;}
+        .a-player span.name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;}
         .a-word { font-size: 1.1rem; font-weight: 800; color: white; flex: 1.2; text-align: center; word-break: break-word; }
         .a-score { display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex: 1.2; }
         
@@ -201,15 +200,13 @@
         .flash-danger { box-shadow: inset 0 0 100px 20px rgba(239, 68, 68, 0.6) !important; }
         .host-control-banner { background: rgba(245, 158, 11, 0.15); border: 1px dashed var(--accent); padding: 10px; border-radius: 12px; margin-bottom: 15px; text-align: center; color: var(--accent); font-size: 0.9rem; font-weight: 700; }
 
-        /* تعديلات للشاشات الصغيرة */
         @media (max-width: 500px) {
             .card { padding: 15px; }
             .game-header { padding: 10px 15px; }
             .timer-display { width: 50px; height: 50px; }
             .val-letter { font-size: 2.2rem; }
-            input[type="text"] { padding: 12px 14px; font-size: 1rem; }
             .btn-stop-game { padding: 12px; font-size: 1.4rem; }
-            .a-player span { display: none; } /* إخفاء اسم اللاعب في المراجعة للشاشات الصغيرة جداً للاكتفاء بالصورة */
+            .a-player span.name { display: none; } /* إخفاء الاسم في المراجعة للاكتفاء بالصورة للشاشات الصغيرة */
         }
     </style>
 </head>
@@ -221,7 +218,7 @@
     <div id="screen-login" class="screen active">
         <div class="container" style="justify-content: center; min-height: 90vh;">
             <div class="logo-wrap">
-                <h1 class="title-font logo-title">أتوبيس<br>كومبليت</h1>
+                <h1 class="title-font logo-title">إنسان<br>حيوان</h1>
                 <p style="color: var(--text-muted); font-size: 1.1rem; margin-top: 10px;">لعبة السرعة والكلمات لـ 2 إلى 8 لاعبين!</p>
             </div>
             
@@ -233,7 +230,7 @@
                 <input type="text" id="inp-name" placeholder="أدخل اسمك هنا..." maxlength="12">
                 
                 <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 25px;">
-                    <button class="btn-primary" id="btn-create" style="width: 100%;">إنشاء غرفة جديدة 👑</button>
+                    <button class="btn-primary" id="btn-create" style="width: 100%;">إنشاء غرفة (أنت القائد) 👑</button>
                     <div class="divider">أو انضم لغرفة صديق</div>
                     <div style="display: flex; gap: 10px;">
                         <input type="text" inputmode="numeric" pattern="[0-9]*" id="inp-room" placeholder="رمز الغرفة (6 أرقام)" maxlength="6" style="letter-spacing: 5px; text-align: center; flex: 1;">
@@ -243,7 +240,7 @@
                 
                 <div id="net-status" style="margin-top: 15px; font-size: 0.85rem; color: var(--danger); text-align: center; font-weight: 700;"></div>
             </div>
-            <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">الإصدار 2.0 | مثالية لجمعات العائلة والأصدقاء</div>
+            <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">الإصدار الكامل | مثالية للعب مع العائلة والأصدقاء</div>
         </div>
     </div>
 
@@ -254,7 +251,7 @@
             
             <div class="card">
                 <div id="host-zone" style="display: none;">
-                    <p style="text-align: center; color: var(--text-muted); margin-bottom: 10px;">أعط هذا الرمز لأصدقائك لينضموا:</p>
+                    <p style="text-align: center; color: var(--text-muted); margin-bottom: 10px;">أعط هذا الرمز لأصدقائك لينضموا إليك:</p>
                     <div class="lobby-code-box" id="btn-copy-code">
                         <div class="code-display" id="lbl-room-code">------</div>
                         <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px;">اضغط لنسخ الرمز 📋</div>
@@ -291,8 +288,8 @@
 
             <div class="card play-area">
                 <div class="input-group">
-                    <label>👤 إسم ولد أو بنت</label>
-                    <input type="text" id="inp-cat-1" class="ans-input" data-cat="1" placeholder="أدخل اسم...">
+                    <label>👤 إنسان</label>
+                    <input type="text" id="inp-cat-1" class="ans-input" data-cat="1" placeholder="أدخل اسم ولد أو بنت...">
                 </div>
                 <div class="input-group">
                     <label>🦁 حيوان</label>
@@ -361,7 +358,8 @@
     
     <script>
         const MAX_PLAYERS = 8;
-        const AVATARS =['🦊', '🐱', '🐼', '🐯', '🐰', '🐸', '🦄', '🐶', '🐔', '🦁', '🦉', '🐙', '🦖', '🐬', '🐧', '👻'];
+        // تمت إضافة خيار "بدون" لمن لا يرغب بإيموجي
+        const AVATARS =['بدون', '🦊', '🐱', '🐼', '🐯', '🐰', '🐸', '🦄', '🐶', '🐔', '🦁', '🦉', '🐙', '🦖', '🐬', '🐧', '👻'];
         const ARABIC_LETTERS =['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي'];
         const CATEGORIES = {
             '1': { id: '1', name: 'إنسان', icon: '👤' },
@@ -383,14 +381,13 @@
                 clearTimeout(Utils.toastTimer);
                 Utils.toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
             },
-            // دالة التوحيد الذكية لمعالجة الهمزات والمسافات (مهمة جداً للعدل في التقييم)
             normalizeForMatch: (text) => {
                 if (!text) return '';
                 return text.trim()
                            .replace(/[أإآا]/g, 'ا')
                            .replace(/ة/g, 'ه')
                            .replace(/ى/g, 'ي')
-                           .replace(/\s+/g, ''); // إزالة المسافات للتحقق من التطابق التام حتى لو اختلف التباعد
+                           .replace(/\s+/g, '');
             },
             checkMatch: (word, targetLetter) => {
                 const w = Utils.normalizeForMatch(word);
@@ -436,12 +433,22 @@
                 const avaBox = document.getElementById('avatar-container');
                 AVATARS.forEach((a, i) => {
                     let btn = document.createElement('div');
-                    btn.className = 'avatar-btn' + (i === 0 ? ' selected' : '');
-                    btn.textContent = a;
-                    btn.onclick = () => { document.querySelectorAll('.avatar-btn').forEach(x=>x.classList.remove('selected')); btn.classList.add('selected'); AppState.myAva = a; };
+                    btn.className = 'avatar-btn' + (i === 1 ? ' selected' : ''); // تحديد الثعلب افتراضياً
+                    if (a === 'بدون') {
+                        btn.classList.add('no-emoji');
+                        btn.textContent = 'بدون';
+                    } else {
+                        btn.textContent = a;
+                    }
+                    
+                    btn.onclick = () => {
+                        document.querySelectorAll('.avatar-btn').forEach(x=>x.classList.remove('selected'));
+                        btn.classList.add('selected');
+                        AppState.myAva = a === 'بدون' ? '' : a;
+                    };
                     avaBox.appendChild(btn);
                 });
-                AppState.myAva = AVATARS[0];
+                AppState.myAva = AVATARS[1]; // الثعلب
 
                 document.body.addEventListener('click', AudioSys.init, {once: true});
                 document.body.addEventListener('touchstart', AudioSys.init, {once: true});
@@ -480,8 +487,11 @@
                         kickBtn = `<button class="btn-danger" style="padding: 6px 12px; font-size: 0.8rem;" onclick="Logic.hostKickPlayer('${id}')">طرد 👢</button>`;
                     }
 
+                    // إخفاء الـ span بالكامل إذا اختار اللاعب "بدون إيموجي"
+                    let avaHtml = p.ava ? `<span class="p-ava">${p.ava}</span>` : '';
+
                     let row = document.createElement('div'); row.className = 'player-row';
-                    row.innerHTML = `<div class="p-info"><span class="p-ava">${p.ava}</span> <span class="p-name">${p.name}</span> ${badge}</div> ${kickBtn}`;
+                    row.innerHTML = `<div class="p-info">${avaHtml} <span class="p-name">${p.name}</span> ${badge}</div> ${kickBtn}`;
                     list.appendChild(row);
                 });
             },
@@ -534,7 +544,8 @@
                 else if (data.type === 'EMERGENCY_STOP' && AppState.phase === 'PLAYING' && !AppState.emergencyMode) {
                     Logic.triggerEmergency(peerId);
                 }
-                else if (data.type === 'SUBMIT_ANSWERS' && AppState.phase === 'PLAYING') {
+                // BUG FIX: Allow 'SUBMITTING' phase so late submissions don't freeze the game
+                else if (data.type === 'SUBMIT_ANSWERS' && (AppState.phase === 'PLAYING' || AppState.phase === 'SUBMITTING')) {
                     if(AppState.players[peerId]) {
                         AppState.players[peerId].answers = data.answers;
                         AppState.answersGathered++;
@@ -554,14 +565,14 @@
                     Utils.showToast(`${AppState.players[peerId].name} غادر اللعبة!`, 'err');
                     delete AppState.players[peerId]; delete AppState.clientConns[peerId];
                     if(AppState.phase === 'LOBBY') { Logic.hostBroadcast({ type: 'SYNC_LOBBY', players: AppState.players }); Logic.updateLobbyUI(); } 
-                    else if (AppState.phase === 'PLAYING') { Logic.hostCheckAllAnswersReceived(); }
+                    else if (AppState.phase === 'PLAYING' || AppState.phase === 'SUBMITTING') { Logic.hostCheckAllAnswersReceived(); }
                 }
             },
 
             hostBroadcast: (msg) => { Object.values(AppState.clientConns).forEach(conn => { if(conn.open) conn.send(msg); }); },
 
             hostStartNextRound: () => {
-                if (Object.keys(AppState.players).length < 2) return Utils.showToast('تحتاج للاعبين كحد أدنى!', 'err');
+                // إزالة قيود اللاعبين للسماح للقائد بالتجربة وحده إن رغب
                 if (AppState.round > AppState.maxRounds) return Logic.hostEndGame();
 
                 AppState.phase = 'PLAYING'; AppState.emergencyMode = false; AppState.answersGathered = 0;
@@ -581,7 +592,7 @@
                 if (AppState.emergencyMode || AppState.phase !== 'PLAYING') return;
                 AppState.emergencyMode = true;
                 const triggerName = AppState.players[triggerId].name;
-                let newTime = Math.min(AppState.timeLeft, 10); // لا تزيد الوقت إذا كان أقل من 10
+                let newTime = Math.min(AppState.timeLeft, 10); 
 
                 Logic.hostBroadcast({ type: 'TRIGGER_EMERGENCY', name: triggerName, time: newTime });
                 Logic.clientTriggerEmergency(triggerName, newTime);
@@ -589,7 +600,8 @@
 
             hostCheckAllAnswersReceived: () => {
                 const activeCount = Object.keys(AppState.players).length;
-                if (AppState.answersGathered >= activeCount && AppState.phase === 'PLAYING') {
+                // BUG FIX: Must accept 'SUBMITTING' phase since the host updates its own phase before calling this
+                if (AppState.answersGathered >= activeCount && (AppState.phase === 'PLAYING' || AppState.phase === 'SUBMITTING')) {
                     clearInterval(AppState.timerInt);
                     Logic.hostEvaluateAndReview();
                 }
@@ -804,6 +816,7 @@
                     inp.disabled = true; myAns[inp.getAttribute('data-cat')] = inp.value.trim();
                 });
 
+                // BUG FIX: Host calls checkAllAnswersReceived right away
                 if (AppState.isHost) { AppState.players[AppState.myId].answers = myAns; AppState.answersGathered++; Logic.hostCheckAllAnswersReceived(); } 
                 else { AppState.hostConn.send({ type: 'SUBMIT_ANSWERS', answers: myAns }); }
                 Utils.showToast('انتهى الوقت! جاري جمع الورق...', 'info');
@@ -837,8 +850,10 @@
                             rejectBtnHtml = `<span style="font-size:0.85rem; color:var(--danger); font-weight:bold;">مرفوض</span>`;
                         }
 
+                        let avaHtml = p.ava ? `<span style="font-size:1.5rem">${p.ava}</span>` : '';
+
                         row.innerHTML = `
-                            <div class="a-player"><span style="font-size:1.5rem">${p.ava}</span> <span>${p.name}</span></div>
+                            <div class="a-player">${avaHtml} <span class="name">${p.name}</span></div>
                             <div class="a-word">${w}</div>
                             <div class="a-score">
                                 ${rejectBtnHtml}
@@ -860,9 +875,11 @@
                 sorted.forEach((p, i) => {
                     let medal = i===0 ? '🥇' : (i===1 ? '🥈' : (i===2 ? '🥉' : ''));
                     let row = document.createElement('div'); row.className = 'leaderboard-row' + (i===0 ? ' gold-border' : '');
+                    let avaHtml = p.ava ? `<span style="font-size:1.8rem">${p.ava}</span>` : '';
+                    
                     row.innerHTML = `
                         <div class="lb-rank">${medal || '#'+(i+1)}</div>
-                        <div class="lb-info"><span style="font-size:1.8rem">${p.ava}</span> ${p.name}</div>
+                        <div class="lb-info">${avaHtml} ${p.name}</div>
                         <div class="lb-score">${p.score} <span style="font-size:0.8rem;color:var(--text-muted);font-family:'Cairo';">نقطة</span></div>
                     `;
                     lb.appendChild(row);
